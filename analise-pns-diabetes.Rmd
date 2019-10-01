@@ -1,0 +1,217 @@
+---
+title: "Análise, PNS - DIABETES"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+library(srvyr)
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+library(knitr)
+library(tidyr)
+```
+
+# Introdução
+
+## R Markdown
+
+## Leitura e preparação dos dados
+
+Os dados da Pesquisa Nacional de Saúde 2013 são disponibilizados pelo IBGE no seu site. 
+
+**É importante lembrar que os dados relacionados a diabetes consideram pessoas com 18 anos ou mais**; por isso, o total de pessoas não é exatamente a população brasileira, isto é, perto de 200 milhões. mas é aproximadamente 143 milhões.
+
+```{r message=FALSE, warning=FALSE, echo = FALSE}
+
+#ajustar como os resutados serão mostraos
+options( survey.lonely.psu = "adjust" )
+
+library(survey)
+
+#importando a biblioteca.
+pns_design <- readRDS(file.path(path.expand( "~" ) ,
+                                "databases/PNS/Dados/",
+                                "2013 long questionnaire survey design.rds" ))
+
+```
+
+### Variáveis interessantes para análise
+
+
+<!-- ### Utilizando o pacote `srvyr`  -->
+```{r message=FALSE, warning=FALSE}
+library(srvyr)
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+library(knitr)
+library(tidyr)
+```
+
+```{r  echo = FALSE}
+#adiciona a sintaxe dplyr de manipulação de dados ao pacote survey
+pns_design_srvyr <- as_survey_design(pns_design)
+```
+
+## Criação de variáveis adicionais
+
+
+### IMC -- Índice de Massa Corporal
+
+Ao invés de utilizarmos diretamente o peso como uma variável de comparação, vamos utilizar o Índice de Massa Corporal (IMC), definido como: 
+
+```{r  echo = FALSE}
+pns_design_srvyr <- pns_design_srvyr %>% mutate(imc = w00103/(w00203/100*w00203/100)) 
+
+```
+
+```{r echo=FALSE }
+pns_design_srvyr <- pns_design_srvyr %>% 
+     mutate(imcclass = case_when(imc < 17.0 ~ "1",
+                                 imc >= 17.0 & imc < 18.5 ~ "2",
+                                 imc >= 18.5 & imc < 25.0 ~ "3",
+                                 imc >= 25.0 & imc < 30.0 ~ "4",
+                                 imc >= 30.0 & imc < 35.0 ~ "5",
+                                 imc >= 35.0 & imc < 40.0 ~ "6",
+                                 imc >= 40.0 ~ "7"
+                                 ))
+
+```
+
+
+
+```{r echo=FALSE}
+# Criando uma variavel idade numerica
+pns_design_srvyr <- pns_design_srvyr %>% mutate(idade = as.numeric(c008))
+pns_design_srvyr <- pns_design_srvyr %>% 
+     mutate(fxetaria = case_when(idade <   5.0 ~ "2",
+                                 idade >=  5.0 & idade < 10.0 ~ "7",
+                                 idade >= 10.0 & idade < 15.0 ~ "12",
+                                 idade >= 15.0 & idade < 20.0 ~ "18",
+                                 idade >= 20.0 & idade < 25.0 ~ "22",
+                                 idade >= 25.0 & idade < 40.0 ~ "32",
+                                 idade >= 40.0 & idade < 60.0 ~ "50",
+                                 idade >= 60.0 ~ "60"))
+      
+```
+
+## Distribuição de pessoas por região
+
+```{r echo=FALSE}
+tir <- svytable(~ fxetaria + region, pns_design_srvyr)
+tir.df <- as.data.frame(tir)
+tir.spread <- spread(tir.df, region, Freq  )
+kable(tir.spread, digits = 3, col.names = c("Faixa Etaria", "Norte","Nordeste","Sudeste","Sul","Centro-Oeste"), caption = "Distribuição da População por Classe de IMC por Regiões do Brasil")
+```
+```{r echo=FALSE}
+g <- ggplot(data = tir.df) + geom_bar(aes(x = region, y = Freq/1000, fill = fxetaria), stat = "identity",  position = "dodge") + labs(x = "Região",y = "Pessoas (x1000)", title = "Distribuição da População por Faixa Etaria por Regiões do Brasil", fill = "Faixa Etaria") +  labs_pubr() + theme_pubr()
+g
+```
+
+
+                                
+### Frequência de Atividade Física
+
+Para permitir uma melhor análise do impacto da atividade física nas doenças crônicas, criamos uma nova variável que permita relacionar a frequência de modo direto, já que a variável original `m016` apresenta uma codificação não invertida.
+
+
+Valor Original    |      Codificação Original         | Novo Valor    | Codificação Variável `freqativ`
+------------------|-----------------------------------|---------------|----------------------------------------
+ 1       |  mais de uma vez por semana       |     5      |  mais de uma vez por semana
+ 2       |  uma vez por semana               |     4      |  uma vez por semana
+ 3       |  de 2 a 3 vezes por mês           |     3      |  de 2 a 3 vezes por mês
+ 4       |  algumas vezes no ano             |     2      |  algumas vezes no ano
+ 5       |  uma vez no ano                   |     1      |    uma vez no ano
+ 6       |   nenhuma vez                     |     0      |     nenhuma vez
+
+```{r echo=FALSE }
+
+pns_design_srvyr <- pns_design_srvyr %>% mutate(freqativ = case_when(m016 == 6 ~ 0, # Nenhuma vez
+                                                                     m016 == 5 ~ 1, # Uma vez/ano
+                                                                     m016 == 4 ~ 2, # Algumas vezes/ano
+                                                                     m016 == 3 ~ 3, # 2-3 vezes/mes
+                                                                     m016 == 2 ~ 4, # Uma vez/semana
+                                                                     m016 == 1 ~ 5, # Mais de uma vez/semana
+                                                                     ))
+
+
+```
+
+#Frequencia de atividade fisica por idade
+```{r echo=FALSE}
+tff <- svytable(~ freqativ + fxetaria, pns_design_srvyr)
+tff.df <- as.data.frame(tff)
+tff.spread <- spread(tff.df, fxetaria, Freq  )
+
+g <- ggplot(data = tff.df) + geom_bar(aes(x = fxetaria, y = Freq/1000, fill = freqativ), stat = "identity",  position = "dodge") + labs(x = "Faixa Etaria",y = "Pessoas (x1000)", title = "Distribuição da População por Frequencia de Ativ Fisica por Faixa Etaria", fill = "Freq Ativ Fisica") +  labs_pubr() + theme_pubr()
+g
+
+```
+
+## Tabulações dos Dados
+
+### Verificação de consistência das análises
+
+```{r results= 'hide',  echo=FALSE}
+tabela.prop <- prop.table(svytable(~ imcclass + region, pns_design_srvyr))
+obesos.perc <- as_tibble(tabela.prop) %>% filter(imcclass >= 4) %>% summarise(tot = sum(n))
+```
+
+Para fins de consistência, buscou-se notícias sobre a obesidade no Brasil com base na Pesquisa Nacional de Saúde 2013 e foram encontradas algumas informações.
+
+Por exemplo, o G1 da Globo colocou esta notícia na seção **Bem Estar**, em 21 de Agosto de 2015:
+
+> **56,9% dos brasileiros têm excesso de peso, diz pesquisa de saúde do IBGE**
+
+O link para a reportagem é:
+
+`http://g1.globo.com/bemestar/noticia/2015/08/569-dos-brasileiros-tem-excesso-de-peso-diz-pesquisa-de-saude-do-ibge.html`
+
+**Utilizando os dados originais da PNS, isto é, os dados baixados do IBGE e preparados para esta análise  (microdados), este índice foi calculado como** `r round(obesos.perc*100, 2)`%, ou seja, foi possível reproduzir os resultados divulgados pelo IBGE. Neste cálculo são considerados todos que estão com IMC 4 ou mais.
+
+Outras análises e tabulações do IBGE também foram utilizadas para comparação e verificação da consistência dos resultados obtidos, indicando que a metodologia e ferramentas utilizadas aqui estão de acordo com o que é realizado pelo próprio IBGE.
+
+### Distribuição da População por Classe de IMC por Região do Brasil
+
+Em termos de distribuição por Regiões do Brasil, temos os seguintes resultados:
+
+```{r echo=FALSE}
+tabela <- svytable(~ imcclass + region, pns_design_srvyr)
+tb.df <- as.data.frame(tabela)
+tb.spread <- spread(tb.df, region, Freq  )
+kable(tb.spread, digits = 3, col.names = c("Classe IMC", "Norte","Nordeste","Sudeste","Sul","Centro-Oeste"), caption = "Distribuição da População por Classe de IMC por Regiões do Brasil")
+```
+
+
+
+```{r echo=FALSE}
+g <- ggplot(data = tb.df) + geom_bar(aes(x = region, y = Freq/1000, fill = imcclass), stat = "identity",  position = "dodge") + labs(x = "Região",y = "Pessoas (x1000)", title = "Distribuição da População por Classe de IMC por Regiões do Brasil", fill = "Classe IMC") +  labs_pubr() + theme_pubr()
+g
+```
+
+```{r echo = FALSE }
+tabelaimcreg.prop <- prop.table(svytable(~ imcclass + region, pns_design_srvyr))
+kable(cbind(tb.spread$imcclass,addmargins(tabelaimcreg.prop*100, 2)), digits = 2, caption = "Proporção de Distribuição da População por Classe de IMC por Regiões do Brasil", col.names = c("Classe IMC", "Norte","Nordeste","Sudeste","Sul","Centro-Oeste", "Total (%)"))
+```
+
+### Faixas Etárias por Região do Brasil
+
+Em termos de distribuição por Regiões do Brasil, temos os seguintes resultados:
+
+
+```{r  echo=FALSE}
+tabela.fxet <- svytable(~ fxetaria + region, pns_design_srvyr)
+tbfxet.df <- as.data.frame(tabela.fxet)
+tbfxet.spread <- spread(tbfxet.df, region, Freq  )
+kable(tbfxet.spread, digits = 3, col.names = c("Faixa Etaria", "Norte","Nordeste","Sudeste","Sul","Centro-Oeste"),  caption = "Distribuição da População por Faixa Etária (acima de 18 anos) por Regiões do Brasil")
+```
+
+```{r  echo=FALSE}
+g <- ggplot(data = tbfxet.df) + geom_bar(aes(x = region, y = Freq/1000, fill = fxetaria), stat = "identity",  position = "dodge") + labs(x = NULL,y = "Pessoas (x1000)", title = "Distribuição da População por Faixa Etária (acima de 18 anos) \npor Regiões do Brasil", fill = "Faixa Etária") +  labs_pubr() + theme_pubr() #+ theme(legend.position = "right")
+g
+```
