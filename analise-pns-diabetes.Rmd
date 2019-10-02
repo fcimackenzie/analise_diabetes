@@ -1,6 +1,9 @@
 ---
 title: "Análise, PNS - DIABETES"
-output: pdf_document
+subtitle: "Data Prep"
+author: "Diego Aguirre, Gabriel Rodrigues, Henrique Alves"
+date: "2018"
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -24,27 +27,140 @@ library(tidyr)
 
 Os dados da Pesquisa Nacional de Saúde 2013 são disponibilizados pelo IBGE no seu site. 
 
-**É importante lembrar que os dados relacionados a diabetes consideram pessoas com 18 anos ou mais**; por isso, o total de pessoas não é exatamente a população brasileira, isto é, perto de 200 milhões. mas é aproximadamente 143 milhões.
+**É importante lembrar que os dados relacionados a diabetes consideram pessoas com 18 anos ou mais**; por isso, o total de pessoas não é exatamente a população brasileira, isto é, perto de 200 milhões. mas é aproximadamente 143 milhões, com os dados de 2013.
 
 ```{r message=FALSE, warning=FALSE, echo = FALSE}
 
-#ajustar como os resutados serão mostraos
+#ajustar como os resutados serão mostrados
 options( survey.lonely.psu = "adjust" )
 
 library(survey)
 
 #importando a biblioteca.
-pns_design <- readRDS(file.path(path.expand( "~" ) ,
-                                "databases/PNS/Dados/",
+pns_design <- readRDS(file.path(path.expand( ".." ) ,
+                                "databases",
                                 "2013 long questionnaire survey design.rds" ))
 
 ```
 
+
 ### Variáveis interessantes para análise
 
+Variáveis Demográficas e Pessoais:
 
-<!-- ### Utilizando o pacote `srvyr`  -->
+* `c006` - Sexo:
+    + `1` - masculino
+    + `2` - feminino
+* `i001` - Tem plano de saúde
+    + `1` - sim
+    + `2` - não
+* `c008` - Idade (numérica)
+* `c009` - Cor ou Raça
+   + `1` - Branca
+   + `2` - Preta
+   + `3` - Amarela
+   + `4` - Parda
+   + `5` - Indígena
+   + `9` - Ignorado
+* `m016` - nos últimos 12 meses, frequência de atividades esportivas
+    + `1` - mais de uma vez por semana;
+    + `2` - uma vez por semana;
+    + `3` - de 2 a 3 vezes por mês;
+    + `4` - algumas vezes no ano;
+    + `5` - uma vez no ano;
+    + `6` - nenhuma vez.
+* `p035`  - quantos dias por semana costuma praticar exerc físico ou esporte
+* `w00103` - peso final (medido) (kg)
+* `w00203` - altura final (medido) (cm)
+* `w00303` - circunferência cintura final (cm)
+
+Variáveis de Utilização de Serviços de Saúde:
+
+* `j004` - Qual foi o principal motivo de saúde que impediu _____ de realizar suas atividade habituais nas duas últimas semanas? 
+   + `14` - Pressão Alta
+   + `15` - Diabetes
+
+Estilos de Vida
+
+* `p020`	- Em quantos dias da semana o(a) Sr(a) costuma tomar refrigerante (ou suco artificial)? (0 = Nunca ou menos de uma vez por semana)
+* `p021` - Que tipo de refrigerante ou suco artificial o(a) Sr(a) costuma tomar?
+   + `1` - 1 copo
+   + `2` - 2 copos
+   + `3` - 3 copos
+            Não aplicavel
+* `p022`	- Em geral, quantos copos de refrigerante ou suco artificial o(a) Sr(a) costuma tomar por dia?
+   + `1` - 1 copo
+   + `2` - 2 copos
+   + `3` - 3 copos
+            Não aplicavel
+* `p025`	- Em quantos dias da semana o(a) Sr(a) come alimentos doces, tais como pedaços de bolo ou torta, doces, chocolates, balas, biscoitos ou bolachas doces? (0 = Nunca ou menos de uma vez por semana)
+* `p027` - Com que frequência o(a) Sr(a) costuma consumir alguma bebida alcoólica?
+   + `1` - Não bebo nunca
+   + `2` - Mênos de uma vez por mês
+   + `3` - Uma vez ou mais por mês
+            Não aplicavel
+* `P028`	- Quantos dias por semana o(a) Sr(a) costuma tomar alguma bebida alcoólica? (0 = Nunca ou menos de uma vez por semana)
+
+* `P029`	- Em geral, no dia que o(a) Sr(a) bebe, quantas doses de bebida alcoólica o(a) Sr(a) consome? (1 dose de bebida alcoólica equivale a 1 lata de cerveja, 1 taça de vinho ou 1 dose de cachaça, whisky ou qualquer outra bebida alcoólica destilada)
+* `P03701`	- Em geral, no dia que o(a) Sr(a) pratica exercício ou esporte, quantas horas dura esta atividade?
+* `P03702`	- Em geral, no dia que o(a) Sr(a) pratica exercício ou esporte, quantos minutos dura esta atividade?
+
+Variáveis de Doenças Crônicas
+
+* `Q002`	- Algum médico já lhe deu o diagnóstico de hipertensão arterial (pressão alta)?
+   + `1` - Sim
+   + `2` - Apenas durante a gravidez
+   + `3` - Não
+            Não aplicavel
+* `Q029`	- 
+   + `1` - Há menos de 6 meses
+   + `2` - Entre 6 meses  e menos de 1 ano
+   + `3` - Entre 1 ano e menos de 2 anos
+   + `4` - Entre 2 anos e menos de 3 anos
+   + `5` - Há 3 anos ou mais
+   + `6` - Nunca fez
+            Não aplicavel
+* `Q030`	- Algum médico já lhe deu o diagnóstico de diabetes?
+   + `1` - Sim
+   + `2` - Apenas durante a gravidez (só para mulheres)
+   + `3` - Não
+            Não aplicavel
+* `Q060`	- Algum médico já lhe deu o diagnóstico de colesterol alto?
+   + `1` - Sim
+   + `2` - Não
+            Não aplicavel
+* `Q068`	- Algum médico já lhe deu o diagnóstico de AVC (Acidente Vascular cerebral) ou derrame?
+   + `1` - Sim
+   + `2` - Não
+            Não aplicavel
+* `Q124`	- Algum médico já lhe deu o diagnóstico de insuficiência renal crônica?
+   + `1` - Sim
+   + `2` - Não
+            Não aplicavel
+* `S020`	- Durante o pré-natal, a Sra fez exame de sangue? 
+   + `1` - Sim
+   + `2` - Não
+            Não aplicavel
+* `S021`	- Em alguma consulta do pré-natal o médico ou enfermeiro falou que seu exame de sangue mostrou açúcar alto (presença de diabetes)?
+   + `1` - Sim
+   + `2` - Não
+            Não aplicavel
+* `W00407`	- Pressão arterial sistólica  - Final (em mmHg) 
+   + `60 a 290` - mmHg
+   + `999` - Erro
+W00408 - Pressão arterial diastólica - Final (em mmHg) 
+   + `60 a 290` - mmHg
+   + `999` - Erro
+
+Variáveis de Identificação e controle
+
+V0001 - Unidade da Federação
+V0026	- Tipo de situação censitária
+
+
+
 ```{r message=FALSE, warning=FALSE}
+#Utilizando o pacote `srvyr`
 library(srvyr)
 library(ggplot2)
 library(ggpubr)
