@@ -323,16 +323,38 @@ p
 ```{r echo=FALSE}
 #* `Q030`	- Algum médico já lhe deu o diagnóstico de diabetes?
 #   + `1` - Sim
-#V0001 - Unidade da Federação
+#region
 
 diab_estados <- svytable(~ q030 + region, pns_design_srvyr)
 diab_estados.df <- as.data.frame(diab_estados)
-
+diab_estados.df <- diab_estados.df[diab_estados.df$q030 == '1',]
 diab_estados.df$Freq <- diab_estados.df$Freq / sum(diab_estados.df$Freq)
 
-
+p <-ggplot(data=diab_estados.df, aes(x=region, y=Freq*100)) +
+  geom_bar(stat="identity", fill="steelblue") +
+  geom_text(aes(label=round(Freq*100, digits = 1)), vjust=-0.5, color="black", size=3.5)+
+  theme_minimal()
+p
 
 ```
+```{r echo=FALSE}
+#* `Q030`	- Algum médico já lhe deu o diagnóstico de diabetes?
+#   + `1` - Sim
+#V0026 - Tipo de situacao censitaria
+
+diab_censit <- svytable(~ q030 + v0026, pns_design_srvyr)
+diab_censit.df <- as.data.frame(diab_censit)
+diab_censit.df <- diab_censit.df[diab_censit.df$q030 == '1',]
+diab_censit.df$v0026 <- c("Urbano", "Rural")
+diab_censit.df$Freq <- diab_censit.df$Freq / sum(diab_censit.df$Freq)
+
+p <-ggplot(data=diab_censit.df, aes(x=v0026, y=Freq*100)) +
+  geom_bar(stat="identity", fill="steelblue") +
+  geom_text(aes(label=round(Freq*100, digits = 1)), vjust=-0.5, color="black", size=3.5)+
+  theme_minimal()
+p
+```
+
 
 ```{r echo=FALSE}
 g <- ggplot(data = tb.df) + geom_bar(aes(x = region, y = Freq/1000, fill = imcclass), stat = "identity",  position = "dodge") + labs(x = "Região",y = "Pessoas (x1000)", title = "Distribuição da População por Classe de IMC por Regiões do Brasil", fill = "Classe IMC") +  labs_pubr() + theme_pubr()
