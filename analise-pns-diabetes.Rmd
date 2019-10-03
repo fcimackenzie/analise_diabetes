@@ -7,7 +7,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r message=FALSE, warning=FALSE}
@@ -181,10 +181,24 @@ pns_design_srvyr <- as_survey_design(pns_design)
 
 Ao invés de utilizarmos diretamente o peso como uma variável de comparação, vamos utilizar o Índice de Massa Corporal (IMC), definido como: 
 
+$$\mbox{IMC} = \frac{\mbox{peso}}{\mbox{altura}^2}$$
+
 ```{r  echo = FALSE}
 pns_design_srvyr <- pns_design_srvyr %>% mutate(imc = w00103/(w00203/100*w00203/100)) 
 
 ```
+
+Vamos considerar também as faixas do IMC definidas pela Organização Mundial da Saúde, conforme mostrado na tabela a seguir:
+
+Classificação        |  Faixa de Peso    |       Sintomas
+---------------------|-------------------|----------------------------------------------------
+Muito abaixo do peso |16 a 16,9 kg/m2    | Queda de cabelo, infertilidade, ausência menstrual
+Abaixo do peso       |17 a 18,4 kg/m2    | Fadiga, stress, ansiedade
+Peso normal          |18,5 a 24,9 kg/m2  | Menor risco de doenças cardíacas e vasculares
+Acima do peso        |25 a 29,9 kg/m2    | Fadiga, má circulação, varizes
+Obesidade Grau I     |30 a 34,9 kg/m2    | Diabetes, angina, infarto, aterosclerose
+Obesidade Grau II    |35 a 40 kg/m2      | Apneia do sono, falta de ar
+Obesidade Grau III   |maior que 40 kg/m2 | Refluxo, dificuldade para se mover, escaras, diabetes, infarto, AVC
 
 ```{r echo=FALSE }
 pns_design_srvyr <- pns_design_srvyr %>% 
@@ -202,7 +216,7 @@ pns_design_srvyr <- pns_design_srvyr %>%
 
 
 ```{r echo=FALSE}
-# Criando uma variavel idade numerica
+# Criando uma variavel de faixa etaria
 pns_design_srvyr <- pns_design_srvyr %>% mutate(idade = as.numeric(c008))
 pns_design_srvyr <- pns_design_srvyr %>% 
      mutate(fxetaria = case_when(idade <   5.0 ~ "2",
@@ -221,13 +235,68 @@ pns_design_srvyr <- pns_design_srvyr %>%
 ```{r echo=FALSE}
 tir <- svytable(~ fxetaria + region, pns_design_srvyr)
 tir.df <- as.data.frame(tir)
-tir.spread <- spread(tir.df, region, Freq  )
-kable(tir.spread, digits = 3, col.names = c("Faixa Etaria", "Norte","Nordeste","Sudeste","Sul","Centro-Oeste"), caption = "Distribuição da População por Classe de IMC por Regiões do Brasil")
 ```
+
+
 ```{r echo=FALSE}
 g <- ggplot(data = tir.df) + geom_bar(aes(x = region, y = Freq/1000, fill = fxetaria), stat = "identity",  position = "dodge") + labs(x = "Região",y = "Pessoas (x1000)", title = "Distribuição da População por Faixa Etaria por Regiões do Brasil", fill = "Faixa Etaria") +  labs_pubr() + theme_pubr()
 g
 ```
+
+
+## Prevalência de pessoas com diabetes
+
+Para verificarmos se nossas métricas estão corretas buscamos referência sobre a análise de diabetes pela PNS através de outras fontes:
+
+Artigo:
+   http://www.scielo.br/scielo.php?pid=s2237-96222015000200305&script=sci_abstract&tlng=pt
+   
+Fiocruz:
+   https://portal.fiocruz.br/noticia/taxa-de-incidencia-de-diabetes-cresceu-618-nos-ultimos-10-anos
+
+
+```{r echo=FALSE}
+# q030 variável se diagnostico de diabetes
+tir <- svytable(~ q030, pns_design_srvyr)
+tir.df <- as.data.frame(tir)
+tir.df$q030 <- c("Não Aplicável", "Diabético", "Diabete Gestacional", "Não Diabético")
+tir.df$Freq <- tir.df$Freq / sum(tir.df$Freq) 
+
+p <-ggplot(data=tir.df, aes(x=q030, y=Freq*100)) +
+  geom_bar(stat="identity") +
+  geom_text(aes(label=round(Freq*100, digits = 1)), vjust=-0.5, color="black", size=3.5)+ 
+  theme_pubr()
+p
+
+```
+
+## Porcentagem de homens com diabetes
+```{r echo=FALSE}
+# c006 variavel do sexo do individuo
+
+diab_sexo <- svytable(~ q030 + c006, pns_design_srvyr)
+diab_sexo.df <- as.data.frame(diab_sexo)
+
+
+diab_sexo.df[diab_sexo.df$c006 == "masculino",c("Freq")] <- diab_sexo.df[diab_sexo.df$c006 == "masculino",c("Freq")]/sum(diab_sexo.df[diab_sexo.df$c006 == "masculino",c("Freq")] )
+                                                                                                         diab_sexo.df[diab_sexo.df$c006 == "feminino",c("Freq")] <- diab_sexo.df[diab_sexo.df$c006 == "feminino",c("Freq")]/sum(diab_sexo.df[diab_sexo.df$c006 == "feminino",c("Freq")] )                                 
+                                                                                       
+diab_sexo.df$q030 <-  c("Não Aplicável", "Diabético", "Diabete Gestacional", "Não Diabético", "Não Aplicável", "Diabético", "Diabete Gestacional", "Não Diabético")
+
+                                                                                                         
+p1 <-ggplot(data=diab_sexo.df, aes(x=q030, y=Freq*100 ,fill=c006)) +
+  geom_bar(position="dodge", stat="identity") +
+  geom_text(aes(label=round(Freq*100, digits = 1)), position=position_dodge(width=0.9), vjust=-0.5, color="black", size=3.5)+
+  theme_minimal()+
+  ggtitle("Porcentagem diabetes por sexo") +
+  xlab("Categoria") + ylab("Porcentagem %") + 
+  scale_fill_manual(values=c("#999999", "#E69F00"))
+
+
+p1
+
+```
+
 
 
                                 
@@ -238,12 +307,12 @@ Para permitir uma melhor análise do impacto da atividade física nas doenças c
 
 Valor Original    |      Codificação Original         | Novo Valor    | Codificação Variável `freqativ`
 ------------------|-----------------------------------|---------------|----------------------------------------
- 1       |  mais de uma vez por semana       |     5      |  mais de uma vez por semana
- 2       |  uma vez por semana               |     4      |  uma vez por semana
- 3       |  de 2 a 3 vezes por mês           |     3      |  de 2 a 3 vezes por mês
- 4       |  algumas vezes no ano             |     2      |  algumas vezes no ano
- 5       |  uma vez no ano                   |     1      |    uma vez no ano
- 6       |   nenhuma vez                     |     0      |     nenhuma vez
+ 1                |  mais de uma vez por semana       |     5      |  mais de uma vez por semana
+ 2                |  uma vez por semana               |     4      |  uma vez por semana
+ 3                |  de 2 a 3 vezes por mês           |     3      |  de 2 a 3 vezes por mês
+ 4                |  algumas vezes no ano             |     2      |  algumas vezes no ano
+ 5                |  uma vez no ano                   |     1      |    uma vez no ano
+ 6                |   nenhuma vez                     |     0      |     nenhuma vez
 
 ```{r echo=FALSE }
 
