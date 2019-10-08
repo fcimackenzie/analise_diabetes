@@ -7,7 +7,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r message=FALSE, warning=FALSE}
@@ -185,7 +185,6 @@ $$\mbox{IMC} = \frac{\mbox{peso}}{\mbox{altura}^2}$$
 
 ```{r  echo = FALSE}
 pns_design_srvyr <- pns_design_srvyr %>% mutate(imc = w00103/(w00203/100*w00203/100)) 
-
 ```
 
 Vamos considerar também as faixas do IMC definidas pela Organização Mundial da Saúde, conforme mostrado na tabela a seguir:
@@ -230,18 +229,7 @@ pns_design_srvyr <- pns_design_srvyr %>%
       
 ```
 
-## Distribuição de pessoas por região
 
-```{r echo=FALSE}
-tir <- svytable(~ fxetaria + region, pns_design_srvyr)
-tir.df <- as.data.frame(tir)
-```
-
-
-```{r echo=FALSE}
-g <- ggplot(data = tir.df) + geom_bar(aes(x = region, y = Freq/1000, fill = fxetaria), stat = "identity",  position = "dodge") + labs(x = "Região",y = "Pessoas (x1000)", title = "Distribuição da População por Faixa Etaria por Regiões do Brasil", fill = "Faixa Etaria") +  labs_pubr() + theme_pubr()
-g
-```
 
 
 ## Prevalência de pessoas com diabetes
@@ -252,8 +240,9 @@ Artigo:
    http://www.scielo.br/scielo.php?pid=s2237-96222015000200305&script=sci_abstract&tlng=pt
    
 Fiocruz:
-   https://portal.fiocruz.br/noticia/taxa-de-incidencia-de-diabetes-cresceu-618-nos-ultimos-10-anos
+   https://portal.fiocruz.br/noticia/diabetes-pesquisa-avalia-os-fatores-associados-qualidade-de-vida
 
+Os dados das duas fontes mostram que a porcentagem de diabéticos foi de 6.2%, correspondendo com o nosso gráfico abaixo. 
 
 ```{r echo=FALSE}
 # q030 variável se diagnostico de diabetes
@@ -262,19 +251,19 @@ tir.df <- as.data.frame(tir)
 tir.df$q030 <- c("Não Aplicável", "Diabético", "Diabete Gestacional", "Não Diabético")
 tir.df$Freq <- tir.df$Freq / sum(tir.df$Freq) 
 
-p <-ggplot(data=tir.df, aes(x=q030, y=Freq*100)) +
+p <-ggplot(data=tir.df, aes(x=q030, y=Freq*100, fill = q030)) +
   geom_bar(stat="identity") +
   geom_text(aes(label=round(Freq*100, digits = 1)), vjust=-0.5, color="black", size=3.5)+ 
-  theme_pubr()
+  labs_pubr() + theme_pubr()
 p
 
 ```
 
-## Porcentagem de homens com diabetes
+## Porcentagem de Diagnóstico de Diabetes por sexo
 ```{r echo=FALSE}
 # c006 variavel do sexo do individuo
 
-diab_sexo <- svytable(~ q030 + c006, pns_design_srvyr)
+diab_sexo <- survey::svytable(~ q030 + c006, pns_design_srvyr)
 diab_sexo.df <- as.data.frame(diab_sexo)
 
 
@@ -289,14 +278,33 @@ p1 <-ggplot(data=diab_sexo.df, aes(x=q030, y=Freq*100 ,fill=c006)) +
   geom_text(aes(label=round(Freq*100, digits = 1)), position=position_dodge(width=0.9), vjust=-0.5, color="black", size=3.5)+
   theme_minimal()+
   ggtitle("Porcentagem diabetes por sexo") +
-  xlab("Categoria") + ylab("Porcentagem %") + 
-  scale_fill_manual(values=c("#999999", "#E69F00"))
+  xlab("Categoria") + ylab("Porcentagem %") 
 
 
 p1
 
 ```
 
+
+## Procentagem de diabéticos por Faixa Etária
+```{r echo=FALSE}
+
+fxetaria_diab.df = as.data.frame(svytable(~fxetaria + q030, pns_design_srvyr))
+
+grp <- group_by(fxetaria_diab.df, fxetaria) %>% summarise(freq = sum(Freq))
+
+fxetaria_diab.df <- fxetaria_diab.df[fxetaria_diab.df$q030 == "1",]
+
+fxetaria_diab.df$Freq <- fxetaria_diab.df$Freq/grp$freq
+
+fxetaria_diab.df <- fxetaria_diab.df[-2]
+
+p <- ggplot(data=fxetaria_diab.df, aes(x=fxetaria, y=Freq * 100, fill = fxetaria)) +     
+   geom_bar( stat = "identity",  position = "dodge")+  geom_text(aes(label=round(Freq*100, digits = 1)), position=position_dodge(width=0.9), vjust=-0.5, color="black", size=3.5)
+
+p
+
+```
 
 
                                 
@@ -327,76 +335,71 @@ pns_design_srvyr <- pns_design_srvyr %>% mutate(freqativ = case_when(m016 == 6 ~
 
 ```
 
-#Frequencia de atividade fisica por idade
+##Frequencia de diabetes por frequencia de atividade física
 ```{r echo=FALSE}
-tff <- svytable(~ freqativ + fxetaria, pns_design_srvyr)
-tff.df <- as.data.frame(tff)
-tff.spread <- spread(tff.df, fxetaria, Freq  )
+freq_diab <- svytable(~ q030 + freqativ , pns_design_srvyr)
+freq_diab.df <- as.data.frame(freq_diab)
 
-g <- ggplot(data = tff.df) + geom_bar(aes(x = fxetaria, y = Freq/1000, fill = freqativ), stat = "identity",  position = "dodge") + labs(x = "Faixa Etaria",y = "Pessoas (x1000)", title = "Distribuição da População por Frequencia de Ativ Fisica por Faixa Etaria", fill = "Freq Ativ Fisica") +  labs_pubr() + theme_pubr()
+freq_diab.df <- freq_diab.df[freq_diab.df$q030 == '1',]
+
+freq_diab.df$Freq <- freq_diab.df$Freq/sum(freq_diab.df$Freq)    
+
+g <- ggplot(data = freq_diab.df) + 
+   geom_bar(aes(x = freqativ, y = Freq, fill=freqativ ), stat = "identity",  position = "dodge") +
+   labs(x = "Freq Ativ Fisica",y = "Pessoas %", title = "Frequencia de Ativ Fisica por Faixa Diabetes") 
 g
 
 ```
 
-## Tabulações dos Dados
 
-### Verificação de consistência das análises
-
-```{r results= 'hide',  echo=FALSE}
-tabela.prop <- prop.table(svytable(~ imcclass + region, pns_design_srvyr))
-obesos.perc <- as_tibble(tabela.prop) %>% filter(imcclass >= 4) %>% summarise(tot = sum(n))
-```
-
-Para fins de consistência, buscou-se notícias sobre a obesidade no Brasil com base na Pesquisa Nacional de Saúde 2013 e foram encontradas algumas informações.
-
-Por exemplo, o G1 da Globo colocou esta notícia na seção **Bem Estar**, em 21 de Agosto de 2015:
-
-> **56,9% dos brasileiros têm excesso de peso, diz pesquisa de saúde do IBGE**
-
-O link para a reportagem é:
-
-`http://g1.globo.com/bemestar/noticia/2015/08/569-dos-brasileiros-tem-excesso-de-peso-diz-pesquisa-de-saude-do-ibge.html`
-
-**Utilizando os dados originais da PNS, isto é, os dados baixados do IBGE e preparados para esta análise  (microdados), este índice foi calculado como** `r round(obesos.perc*100, 2)`%, ou seja, foi possível reproduzir os resultados divulgados pelo IBGE. Neste cálculo são considerados todos que estão com IMC 4 ou mais.
-
-Outras análises e tabulações do IBGE também foram utilizadas para comparação e verificação da consistência dos resultados obtidos, indicando que a metodologia e ferramentas utilizadas aqui estão de acordo com o que é realizado pelo próprio IBGE.
-
-### Distribuição da População por Classe de IMC por Região do Brasil
-
-Em termos de distribuição por Regiões do Brasil, temos os seguintes resultados:
+## Taxa de diabéticos por região e por situação censitária
 
 ```{r echo=FALSE}
-tabela <- svytable(~ imcclass + region, pns_design_srvyr)
-tb.df <- as.data.frame(tabela)
-tb.spread <- spread(tb.df, region, Freq  )
-kable(tb.spread, digits = 3, col.names = c("Classe IMC", "Norte","Nordeste","Sudeste","Sul","Centro-Oeste"), caption = "Distribuição da População por Classe de IMC por Regiões do Brasil")
+#* `Q030`	- Algum médico já lhe deu o diagnóstico de diabetes?
+#   + `1` - Sim
+#region
+diab_estados <- svytable(~ q030 + region + v0026, pns_design_srvyr )
+diab_estados.df <- as.data.frame(diab_estados)
+diab_estados.df <- diab_estados.df[diab_estados.df$q030 == '1',]
+diab_estados.df$Freq <- diab_estados.df$Freq / sum(diab_estados.df$Freq)
+
+diab_estados.df$v0026 = as.character(diab_estados.df$v0026)
+diab_estados.df$v0026[diab_estados.df$v0026 == 1]  = "1 - Urbano"
+diab_estados.df$v0026[diab_estados.df$v0026 == 2]  = "2 - Rural"
+
+p <-ggplot(data=diab_estados.df, aes(x=region, y=Freq*100, fill=v0026)) +
+  geom_bar(stat="identity") +
+  geom_text(aes(label=round(Freq*100, digits = 1)), vjust=1, color="black", size=3.5)
+p
 ```
 
-
-
+## Distribuição das taxas de diabéticos por estado
 ```{r echo=FALSE}
-g <- ggplot(data = tb.df) + geom_bar(aes(x = region, y = Freq/1000, fill = imcclass), stat = "identity",  position = "dodge") + labs(x = "Região",y = "Pessoas (x1000)", title = "Distribuição da População por Classe de IMC por Regiões do Brasil", fill = "Classe IMC") +  labs_pubr() + theme_pubr()
-g
-```
+#* `Q030`	- Algum médico já lhe deu o diagnóstico de diabetes?
+#   + `1` - Sim
+#   + V0001 - Unidade da Federação
+library(brazilmaps)
+mapa <- get_brmap("State")
+diab_estados <- svytable(~ v0001 + q030 , pns_design_srvyr)
+diab_estados.df <- as.data.frame(diab_estados)
+diab_estados.df <- diab_estados.df[diab_estados.df$q030 == '1',]
+diab_estados.df$Freq <- (diab_estados.df$Freq / sum(diab_estados.df$Freq))
+teste <- toupper(c("Rondônia","Acre","Amazonas","Roraima","Pará","Amapá","Tocantins","Maranhão","Piauí","Ceará",
+          "Rio Grande do Norte","Paraíba","Pernambuco","Alagoas","Sergipe","Bahia","Minas Gerais","Espírito Santo","Rio de Janeiro","São Paulo","Paraná","Santa Catarina","Rio Grande do Sul","Mato Grosso do Sul",
+          "Mato Grosso","Goiás","Distrito Federal"))
 
-```{r echo = FALSE }
-tabelaimcreg.prop <- prop.table(svytable(~ imcclass + region, pns_design_srvyr))
-kable(cbind(tb.spread$imcclass,addmargins(tabelaimcreg.prop*100, 2)), digits = 2, caption = "Proporção de Distribuição da População por Classe de IMC por Regiões do Brasil", col.names = c("Classe IMC", "Norte","Nordeste","Sudeste","Sul","Centro-Oeste", "Total (%)"))
-```
-
-### Faixas Etárias por Região do Brasil
-
-Em termos de distribuição por Regiões do Brasil, temos os seguintes resultados:
-
-
-```{r  echo=FALSE}
-tabela.fxet <- svytable(~ fxetaria + region, pns_design_srvyr)
-tbfxet.df <- as.data.frame(tabela.fxet)
-tbfxet.spread <- spread(tbfxet.df, region, Freq  )
-kable(tbfxet.spread, digits = 3, col.names = c("Faixa Etaria", "Norte","Nordeste","Sudeste","Sul","Centro-Oeste"),  caption = "Distribuição da População por Faixa Etária (acima de 18 anos) por Regiões do Brasil")
-```
-
-```{r  echo=FALSE}
-g <- ggplot(data = tbfxet.df) + geom_bar(aes(x = region, y = Freq/1000, fill = fxetaria), stat = "identity",  position = "dodge") + labs(x = NULL,y = "Pessoas (x1000)", title = "Distribuição da População por Faixa Etária (acima de 18 anos) \npor Regiões do Brasil", fill = "Faixa Etária") +  labs_pubr() + theme_pubr() #+ theme(legend.position = "right")
-g
+teste <- as.data.frame(teste)
+teste$Freq <- diab_estados.df$Freq
+uf_map <- get_brmap("State") %>% 
+  inner_join(teste, c("nome" = "teste"))
+uf_map %>% 
+  ggplot() +
+  geom_sf(aes(fill = Freq))+
+  scale_fill_continuous(low = "lightblue", high = "darkblue") 
+ 
+#estados<-readOGR("data/estados_br", "UFEBRASIL", encoding = "utf8")
+#diab_estados <- svytable(~ v0001 + q030 , pns_design_srvyr)
+#diab_estados.df <- as.data.frame(diab_estados)
+#diab_estados.df <- diab_estados.df[diab_estados.df$q030 == '1',]
+#diab_estados.df$Freq <- diab_estados.df$Freq / sum(diab_estados.df$Freq)
 ```
