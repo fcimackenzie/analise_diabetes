@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r message=FALSE, warning=FALSE}
-library(srvyr)
+library(srvyr)               
 library(ggplot2)
 library(ggpubr)
 library(dplyr)
@@ -124,7 +124,7 @@ Variáveis de Doenças Crônicas
    + `1` - Sim
    + `2` - Apenas durante a gravidez (só para mulheres)
    + `3` - Não
-            Não aplicavel
+   + `0` -  Não aplicavel
 * `Q060`	- Algum médico já lhe deu o diagnóstico de colesterol alto?
    + `1` - Sim
    + `2` - Não
@@ -302,12 +302,99 @@ tb.df <- as.data.frame(tabela)
 tb.spread <- spread(tb.df, region, Freq  )
 kable(tb.spread, digits = 3, col.names = c("Classe IMC", "Norte","Nordeste","Sudeste","Sul","Centro-Oeste"), caption = "Distribuição da População por Classe de IMC por Regiões do Brasil")
 ```
+```{r echo=FALSE}
+#* `Q030`	- Algum médico já lhe deu o diagnóstico de diabetes?
+#   + `1` - Sim
+#   + `2` - Apenas durante a gravidez (só para mulheres)
+#   + `3` - Não
+#   + `0` -  Não aplicavel
 
+tir <- svytable(~ q030, pns_design_srvyr)
+tir.df <- as.data.frame(tir)
+tir.df$q030 <- c("Não aplicável", "Diabético", "Diabetes gestacional", "Não diabético")
+tir.df$Freq <- tir.df$Freq / sum(tir.df$Freq)
 
+p <-ggplot(data=tir.df, aes(x=q030, y=Freq*100)) +
+  geom_bar(stat="identity", fill="steelblue") +
+  geom_text(aes(label=round(Freq*100, digits = 1)), vjust=-0.5, color="black", size=3.5)+
+  theme_minimal()
+p
+```
+```{r echo=FALSE}
+#* `Q030`	- Algum médico já lhe deu o diagnóstico de diabetes?
+#   + `1` - Sim
+#region
+
+diab_estados <- svytable(~ q030 + region, pns_design_srvyr)
+diab_estados.df <- as.data.frame(diab_estados)
+diab_estados.df <- diab_estados.df[diab_estados.df$q030 == '1',]
+diab_estados.df$Freq <- diab_estados.df$Freq / sum(diab_estados.df$Freq)
+
+p <-ggplot(data=diab_estados.df, aes(x=region, y=Freq*100)) +
+  geom_bar(stat="identity", fill="steelblue") +
+  geom_text(aes(label=round(Freq*100, digits = 1)), vjust=-0.5, color="black", size=3.5)+
+  theme_minimal()
+p
+
+```
+```{r echo=FALSE}
+#* `Q030`	- Algum médico já lhe deu o diagnóstico de diabetes?
+#   + `1` - Sim
+#V0026 - Tipo de situacao censitaria
+
+diab_censit <- svytable(~ q030 + v0026, pns_design_srvyr)
+diab_censit.df <- as.data.frame(diab_censit)
+diab_censit.df <- diab_censit.df[diab_censit.df$q030 == '1',]
+diab_censit.df$v0026 <- c("Urbano", "Rural")
+diab_censit.df$Freq <- diab_censit.df$Freq / sum(diab_censit.df$Freq)
+
+p <-ggplot(data=diab_censit.df, aes(x=v0026, y=Freq*100)) +
+  geom_bar(stat="identity", fill="steelblue") +
+  geom_text(aes(label=round(Freq*100, digits = 1)), vjust=-0.5, color="black", size=3.5)+
+  theme_minimal()
+p
+```
+```{r echo=FALSE}
+#* `Q030`	- Algum médico já lhe deu o diagnóstico de diabetes?
+#   + `1` - Sim
+#   + V0001 - Unidade da Federação
+
+library(brazilmaps)
+mapa <- get_brmap("State")
+
+diab_estados <- svytable(~ v0001 + q030 , pns_design_srvyr)
+diab_estados.df <- as.data.frame(diab_estados)
+diab_estados.df <- diab_estados.df[diab_estados.df$q030 == '1',]
+diab_estados.df$Freq <- (diab_estados.df$Freq / sum(diab_estados.df$Freq))*100
+
+teste <- toupper(c("Rondônia","Acre","Amazonas","Roraima","Pará","Amapá","Tocantins","Maranhão","Piauí","Ceará",
+          "Rio Grande do Norte","Paraíba","Pernambuco","Alagoas","Sergipe","Bahia","Minas Gerais","Espírito Santo","Rio de Janeiro","São Paulo","Paraná","Santa Catarina","Rio Grande do Sul","Mato Grosso do Sul",
+          "Mato Grosso","Goiás","Distrito Federal"))
+teste <- as.data.frame(teste)
+teste$Freq <- diab_estados.df$Freq
+
+uf_map <- get_brmap("State") %>% 
+  inner_join(teste, c("nome" = "teste"))
+
+uf_map %>% 
+  ggplot() +
+  geom_sf(aes(fill = Freq/100))+
+  scale_fill_continuous(low = "lightblue", high = "darkblue") 
+ 
+#estados<-readOGR("data/estados_br", "UFEBRASIL", encoding = "utf8")
+
+#diab_estados <- svytable(~ v0001 + q030 , pns_design_srvyr)
+#diab_estados.df <- as.data.frame(diab_estados)
+#diab_estados.df <- diab_estados.df[diab_estados.df$q030 == '1',]
+#diab_estados.df$Freq <- diab_estados.df$Freq / sum(diab_estados.df$Freq)
+
+```
 
 ```{r echo=FALSE}
 g <- ggplot(data = tb.df) + geom_bar(aes(x = region, y = Freq/1000, fill = imcclass), stat = "identity",  position = "dodge") + labs(x = "Região",y = "Pessoas (x1000)", title = "Distribuição da População por Classe de IMC por Regiões do Brasil", fill = "Classe IMC") +  labs_pubr() + theme_pubr()
 g
+
+
 ```
 
 ```{r echo = FALSE }
