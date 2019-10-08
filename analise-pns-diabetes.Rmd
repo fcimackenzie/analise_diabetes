@@ -354,7 +354,41 @@ p <-ggplot(data=diab_censit.df, aes(x=v0026, y=Freq*100)) +
   theme_minimal()
 p
 ```
+```{r echo=FALSE}
+#* `Q030`	- Algum médico já lhe deu o diagnóstico de diabetes?
+#   + `1` - Sim
+#   + V0001 - Unidade da Federação
 
+library(brazilmaps)
+mapa <- get_brmap("State")
+
+diab_estados <- svytable(~ v0001 + q030 , pns_design_srvyr)
+diab_estados.df <- as.data.frame(diab_estados)
+diab_estados.df <- diab_estados.df[diab_estados.df$q030 == '1',]
+diab_estados.df$Freq <- (diab_estados.df$Freq / sum(diab_estados.df$Freq))*100
+
+teste <- toupper(c("Rondônia","Acre","Amazonas","Roraima","Pará","Amapá","Tocantins","Maranhão","Piauí","Ceará",
+          "Rio Grande do Norte","Paraíba","Pernambuco","Alagoas","Sergipe","Bahia","Minas Gerais","Espírito Santo","Rio de Janeiro","São Paulo","Paraná","Santa Catarina","Rio Grande do Sul","Mato Grosso do Sul",
+          "Mato Grosso","Goiás","Distrito Federal"))
+teste <- as.data.frame(teste)
+teste$Freq <- diab_estados.df$Freq
+
+uf_map <- get_brmap("State") %>% 
+  inner_join(teste, c("nome" = "teste"))
+
+uf_map %>% 
+  ggplot() +
+  geom_sf(aes(fill = Freq/100))+
+  scale_fill_continuous(low = "lightblue", high = "darkblue") 
+ 
+#estados<-readOGR("data/estados_br", "UFEBRASIL", encoding = "utf8")
+
+#diab_estados <- svytable(~ v0001 + q030 , pns_design_srvyr)
+#diab_estados.df <- as.data.frame(diab_estados)
+#diab_estados.df <- diab_estados.df[diab_estados.df$q030 == '1',]
+#diab_estados.df$Freq <- diab_estados.df$Freq / sum(diab_estados.df$Freq)
+
+```
 
 ```{r echo=FALSE}
 g <- ggplot(data = tb.df) + geom_bar(aes(x = region, y = Freq/1000, fill = imcclass), stat = "identity",  position = "dodge") + labs(x = "Região",y = "Pessoas (x1000)", title = "Distribuição da População por Classe de IMC por Regiões do Brasil", fill = "Classe IMC") +  labs_pubr() + theme_pubr()
