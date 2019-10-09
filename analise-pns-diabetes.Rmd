@@ -212,7 +212,22 @@ pns_design_srvyr <- pns_design_srvyr %>%
 
 ```
 
+### Faixa etária
 
+Uma outra classificação interessante é por faixa etária. Temos uma classificação publicada pela Revista Exame no artigo de Novembro de 2016 baseado nos dados da PNAD 2015  [Um retrato do Brasil e do brasileiro, segundo o IBGE](https://exame.abril.com.br/brasil/um-retrato-do-brasil-e-do-brasileiro-segundo-o-ibge/)
+
+No artigo mencionado são considerados os seguintes grupos etários:
+
+Faixa   |   Classe Aqui
+--------|-----------------
+0--4    |  2
+5--9    |  7
+10--14  |  12
+15--19  |  18
+20--24  |  22
+25--39  |  32
+40--59  |  50
+60+     |  60
 
 ```{r echo=FALSE}
 # Criando uma variavel de faixa etaria
@@ -231,18 +246,21 @@ pns_design_srvyr <- pns_design_srvyr %>%
 
 
 
+## Tabulações
 
-## Prevalência de pessoas com diabetes
+### Prevalência de pessoas com diabetes
 
 Para verificarmos se nossas métricas estão corretas buscamos referência sobre a análise de diabetes pela PNS através de outras fontes:
-
-Artigo:
-   http://www.scielo.br/scielo.php?pid=s2237-96222015000200305&script=sci_abstract&tlng=pt
+   
+>**No Brasil, conforme narra o artigo, dados recentes da Pesquisa Nacional em Saúde (PNS) de 2013 estimou a prevalência de DM em 6,2% dos participantes com 18 anos ou mais.**
    
 Fiocruz:
    https://portal.fiocruz.br/noticia/diabetes-pesquisa-avalia-os-fatores-associados-qualidade-de-vida
 
-Os dados das duas fontes mostram que a porcentagem de diabéticos foi de 6.2%, correspondendo com o nosso gráfico abaixo. 
+Esse valor demonstra a consistência das nossas análises como vemos no gráfico abaixo onde a taxa de diabéticos correspondeu ao dos estudos publicados pela Fiocruz.
+   
+Utilizamos a variável `q030` que identifica se o partitipante já foi diagnosticado com Diabetes por algum médico. Os valores `não aplicável` demonstra as pessoas que nunca fizeram exames de sangue , definidas pela variável `q029` que pergunta quando foi a última vez que a pessoa fez exame de sangue. 
+
 
 ```{r echo=FALSE}
 # q030 variável se diagnostico de diabetes
@@ -259,8 +277,18 @@ p
 
 ```
 
-## Porcentagem de Diagnóstico de Diabetes por sexo
+### Porcentagem de Diagnóstico de Diabetes por sexo
+   
+Em termos de distribuição da taxa de diabéticos em relação ao sexo chegamos a uma taxa de 5,4% para os homens e 7% para as mulheres. Ambos os resultados correspondem com a análise do artigo abaixo.
+   
+Para o cáculo utilizamos a variável `c006` que representa o sexo do entrevistado e a variável `q030` utilizada na análise anterior.
+   
+Artigo:
+   http://www.scielo.br/scielo.php?pid=s2237-96222015000200305&script=sci_abstract&tlng=pt
+   
+
 ```{r echo=FALSE}
+
 # c006 variavel do sexo do individuo
 
 diab_sexo <- survey::svytable(~ q030 + c006, pns_design_srvyr)
@@ -277,7 +305,7 @@ p1 <-ggplot(data=diab_sexo.df, aes(x=q030, y=Freq*100 ,fill=c006)) +
   geom_bar(position="dodge", stat="identity") +
   geom_text(aes(label=round(Freq*100, digits = 1)), position=position_dodge(width=0.9), vjust=-0.5, color="black", size=3.5)+
   theme_minimal()+
-  ggtitle("Porcentagem diabetes por sexo") +
+  ggtitle("Porcentagem diabetes em relação ao sexo") +
   xlab("Categoria") + ylab("Porcentagem %") 
 
 
@@ -286,7 +314,13 @@ p1
 ```
 
 
-## Procentagem de diabéticos por Faixa Etária
+### Procentagem de diabéticos por Faixa Etária
+
+No atlas do IDF de 2017 mostrou-se que na população acima dos 65 anos a taxa de prevalência de diabetes é de 19%, bem próximo da nossa análise de 18,1% para a população com 60 anos ou mais.
+
+fonte:
+   https://www.diabetes.org.br/profissionais/images/2018/poster-atlas-idf-2017.pdf
+
 ```{r echo=FALSE}
 
 fxetaria_diab.df = as.data.frame(svytable(~fxetaria + q030, pns_design_srvyr))
@@ -310,7 +344,7 @@ p
                                 
 ### Frequência de Atividade Física
 
-Para permitir uma melhor análise do impacto da atividade física nas doenças crônicas, criamos uma nova variável que permita relacionar a frequência de modo direto, já que a variável original `m016` apresenta uma codificação não invertida.
+Para permitir uma melhor análise da relação da atividade física com a diabetes, criamos uma nova variável que permita relacionar a frequência de modo direto, já que a variável original `m016` apresenta uma codificação não invertida.
 
 
 Valor Original    |      Codificação Original         | Novo Valor    | Codificação Variável `freqativ`
@@ -335,9 +369,16 @@ pns_design_srvyr <- pns_design_srvyr %>% mutate(freqativ = case_when(m016 == 6 ~
 
 ```
 
-##Frequencia de diabetes por frequencia de atividade física
+### taxa de diabéticos por frequencia de atividade física
+
+   Um dos fatores preditores que podem indicar se uma pessoa é propensa ou não a desenvolver a diabetes é se ela pratica ou não atividade física. Mais de 80% dos diabéticos não praticam atividades físicas, mas vemos há um aumento dos diabéticos que mantém uma frequencia de 1 vez por semana ou mais. 
+   Como demonstrado no artigo abaixo, realizar atividades físicas é essencial para ajudar no bom controle da doença e garantir uma boa qualidade de vida. 
+   
+Artigo:
+   https://www.diabetes.org.br/publico/meu-esporte-minha-vida/965-atividade-fisica-e-diabetes
+   
 ```{r echo=FALSE}
-freq_diab <- svytable(~ q030 + freqativ , pns_design_srvyr)
+freq_diab <- survey::svytable(~ q030 + freqativ + fxetaria , pns_design_srvyr)
 freq_diab.df <- as.data.frame(freq_diab)
 
 freq_diab.df <- freq_diab.df[freq_diab.df$q030 == '1',]
@@ -345,8 +386,8 @@ freq_diab.df <- freq_diab.df[freq_diab.df$q030 == '1',]
 freq_diab.df$Freq <- freq_diab.df$Freq/sum(freq_diab.df$Freq)    
 
 g <- ggplot(data = freq_diab.df) + 
-   geom_bar(aes(x = freqativ, y = Freq, fill=freqativ ), stat = "identity",  position = "dodge") +
-   labs(x = "Freq Ativ Fisica",y = "Pessoas %", title = "Frequencia de Ativ Fisica por Faixa Diabetes") 
+   geom_bar(aes(x = freqativ, y = Freq, fill=fxetaria ), stat = "identity") +
+   labs(x = "Freq Ativ Fisica",y = "Pessoas %", title = "Frequencia de Ativ Fisica x Diabeticos") 
 g
 
 ```
@@ -380,7 +421,7 @@ p
 #   + V0001 - Unidade da Federação
 library(brazilmaps)
 mapa <- get_brmap("State")
-diab_estados <- svytable(~ v0001 + q030 , pns_design_srvyr)
+diab_estados <- survey::svytable(~ v0001 + q030 , pns_design_srvyr)
 diab_estados.df <- as.data.frame(diab_estados)
 diab_estados.df <- diab_estados.df[diab_estados.df$q030 == '1',]
 diab_estados.df$Freq <- (diab_estados.df$Freq / sum(diab_estados.df$Freq))
