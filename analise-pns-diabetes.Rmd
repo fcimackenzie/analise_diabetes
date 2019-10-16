@@ -257,9 +257,9 @@ Para verificarmos se nossas métricas estão corretas buscamos referência sobre
 Fiocruz:
    https://portal.fiocruz.br/noticia/diabetes-pesquisa-avalia-os-fatores-associados-qualidade-de-vida
 
-Esse valor demonstra a consistência das nossas análises como vemos no gráfico abaixo onde a taxa de diabéticos correspondeu ao dos estudos publicados pela Fiocruz.
+Esse valor demonstra a consistência das nossas análises como vemos no gráfico abaixo onde a taxa de diabéticos correspondeu ao do estudos publicados pela Fiocruz.
    
-Utilizamos a variável `q030` que identifica se o partitipante já foi diagnosticado com Diabetes por algum médico. Os valores `não aplicável` demonstra as pessoas que nunca fizeram exames de sangue , definidas pela variável `q029` que pergunta quando foi a última vez que a pessoa fez exame de sangue. 
+Utilizamos a variável `q030` que identifica se o partitipante já foi diagnosticado com Diabetes por algum médico. Os valores `não aplicável` demonstra as pessoas que nunca fizeram exames de sangue, definidas pela variável `q029` que pergunta quando foi a última vez que a pessoa fez exame de sangue. 
 
 
 ```{r echo=FALSE}
@@ -316,7 +316,7 @@ p1
 
 ### Procentagem de diabéticos por Faixa Etária
 
-No atlas do IDF de 2017 mostrou-se que na população acima dos 65 anos a taxa de prevalência de diabetes é de 19%, bem próximo da nossa análise de 18,1% para a população com 60 anos ou mais.
+No atlas do IDF de 2017 mostrou-se que na população mundial acima dos 65 anos a taxa de prevalência de diabetes é de 19%, bem próximo da nossa análise de 18,1% para a população com 60 anos ou mais.
 
 fonte:
    https://www.diabetes.org.br/profissionais/images/2018/poster-atlas-idf-2017.pdf
@@ -369,9 +369,9 @@ pns_design_srvyr <- pns_design_srvyr %>% mutate(freqativ = case_when(m016 == 6 ~
 
 ```
 
-### taxa de diabéticos por frequencia de atividade física
+### Taxa de diabéticos por frequencia de atividade física
 
-   Um dos fatores preditores que podem indicar se uma pessoa é propensa ou não a desenvolver a diabetes é se ela pratica ou não atividade física. Mais de 80% dos diabéticos não praticam atividades físicas, mas vemos há um aumento dos diabéticos que mantém uma frequencia de 1 vez por semana ou mais. 
+   Um dos fatores preditores que podem indicar se uma pessoa é propensa ou não a desenvolver a diabetes é se ela pratica ou não atividade física. Mais de 80% dos diabéticos não praticam atividades físicas, mas vemos que há um aumento dos diabéticos que mantém uma frequencia de 1 vez por semana ou mais. 
    Como demonstrado no artigo abaixo, realizar atividades físicas é essencial para ajudar no bom controle da doença e garantir uma boa qualidade de vida. 
    
 Artigo:
@@ -395,52 +395,93 @@ g
 
 ## Taxa de diabéticos por região e por situação censitária
 
+
+```{r echo=FALSE}
+
+dist_populacao <- as.data.frame(survey::svytable(~region + v0026, pns_design_srvyr ))
+
+pop_aux1 <- dist_populacao[dist_populacao$v0026 == 1,]
+colnames(pop_aux1) <- c("Regiao", "Urbano", "Freq_Urbano")
+
+pop_aux2 <- dist_populacao[dist_populacao$v0026 == 2,]
+colnames(pop_aux2) <- c("Regiao", "Rural", "Freq_Rural")
+
+dist_populacao <- cbind(pop_aux1,pop_aux2[, c("Rural", "Freq_Rural")])
+
+dist_populacao$total <- dist_populacao$Freq_Urbano + dist_populacao$Freq_Rural
+
+dist_populacao[,c("Regiao", "Freq_Urbano", "Freq_Rural")]
+
+```
+
+   Dos aproximadamente 146 milhões de brasileiros acima de 18 anos, cerca de 64 milhões(44%) estão no sudeste, isso implica que a quantidade de diabéticos nessa região vai muito maior do que as outras regiões como vemos no gráfico abaixo. Cerca de 49.7% dos diabéticos residem no sudeste brasileiro.
+
+
 ```{r echo=FALSE}
 #* `Q030`	- Algum médico já lhe deu o diagnóstico de diabetes?
 #   + `1` - Sim
 #region
-diab_estados <- svytable(~ q030 + region + v0026, pns_design_srvyr )
+diab_estados <- survey::svytable(~ q030 + region + v0026, pns_design_srvyr )
 diab_estados.df <- as.data.frame(diab_estados)
+
 diab_estados.df <- diab_estados.df[diab_estados.df$q030 == '1',]
-diab_estados.df$Freq <- diab_estados.df$Freq / sum(diab_estados.df$Freq)
+#diab_estados.df$Freq <- diab_estados.df$Freq / sum(diab_estados.df$Freq)
 
 diab_estados.df$v0026 = as.character(diab_estados.df$v0026)
 diab_estados.df$v0026[diab_estados.df$v0026 == 1]  = "1 - Urbano"
 diab_estados.df$v0026[diab_estados.df$v0026 == 2]  = "2 - Rural"
 
-p <-ggplot(data=diab_estados.df, aes(x=region, y=Freq*100, fill=v0026)) +
+
+p <-ggplot(data=diab_estados.df, aes(x=region, y=Freq/1000, fill=v0026)) +
   geom_bar(stat="identity") +
-  geom_text(aes(label=round(Freq*100, digits = 1)), vjust=1, color="black", size=3.5)
+  geom_text(aes(label=round(Freq/1000, digits = 1)), vjust=1, color="black", size=3.5)
 p
+
 ```
 
 ## Distribuição das taxas de diabéticos por estado
+
+   Como demonstrado no artigo acima as maiores taxas de diabéticos do Brasil estão em Mato Grosso do Sul, São Paulo e Rio Grande do Sul respectivamente. Esses dados correspondem com as taxas demonstrados no gráfico abaixo.
+
 ```{r echo=FALSE}
 #* `Q030`	- Algum médico já lhe deu o diagnóstico de diabetes?
 #   + `1` - Sim
 #   + V0001 - Unidade da Federação
 library(brazilmaps)
 mapa <- get_brmap("State")
-diab_estados <- survey::svytable(~ v0001 + q030 , pns_design_srvyr)
-diab_estados.df <- as.data.frame(diab_estados)
-diab_estados.df <- diab_estados.df[diab_estados.df$q030 == '1',]
-diab_estados.df$Freq <- (diab_estados.df$Freq / sum(diab_estados.df$Freq))
+
+diab_estados <- as.data.frame(survey::svytable(~ v0001 + q030 , pns_design_srvyr))
+qtd_estados = aggregate(diab_estados$Freq, by=list(Category=diab_estados$v0001), FUN=sum)
+
+diab_estados <- diab_estados[diab_estados$q030 == 1,]
+
+diab_estados$Porcent <- diab_estados$Freq / qtd_estados$x
+
+
 teste <- toupper(c("Rondônia","Acre","Amazonas","Roraima","Pará","Amapá","Tocantins","Maranhão","Piauí","Ceará",
           "Rio Grande do Norte","Paraíba","Pernambuco","Alagoas","Sergipe","Bahia","Minas Gerais","Espírito Santo","Rio de Janeiro","São Paulo","Paraná","Santa Catarina","Rio Grande do Sul","Mato Grosso do Sul",
           "Mato Grosso","Goiás","Distrito Federal"))
 
-teste <- as.data.frame(teste)
-teste$Freq <- diab_estados.df$Freq
+porc_est <- as.data.frame(teste)
+porc_est$Porcent <- diab_estados$Porcent
+
 uf_map <- get_brmap("State") %>% 
-  inner_join(teste, c("nome" = "teste"))
+  inner_join(porc_est, c("nome" = "teste"))
 uf_map %>% 
   ggplot() +
-  geom_sf(aes(fill = Freq))+
+  geom_sf(aes(fill = Porcent)) +
   scale_fill_continuous(low = "lightblue", high = "darkblue") 
- 
-#estados<-readOGR("data/estados_br", "UFEBRASIL", encoding = "utf8")
-#diab_estados <- svytable(~ v0001 + q030 , pns_design_srvyr)
-#diab_estados.df <- as.data.frame(diab_estados)
-#diab_estados.df <- diab_estados.df[diab_estados.df$q030 == '1',]
-#diab_estados.df$Freq <- diab_estados.df$Freq / sum(diab_estados.df$Freq)
+
+```
+
+
+
+
+
+```{r echo=FALSE}
+
+survey::svyhist(~as.numeric(q031), subset(pns_design_srvyr, q030==1))
+dens <- survey::svysmooth(~as.numeric(q031), subset(pns_design_srvyr, q030==1))
+lines(dens,col="blue",lwd=2)
+
 ```
