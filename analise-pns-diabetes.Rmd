@@ -1,9 +1,11 @@
 ---
 title: "Análise, PNS - DIABETES"
-subtitle: "Data Prep"
 author: "Diego Aguirre, Gabriel Rodrigues, Henrique Alves"
-date: "2018"
-output: html_document
+date: '2019'
+output:
+  pdf_document: default
+  html_document: default
+subtitle: Data Prep
 ---
 
 ```{r setup, include=FALSE}
@@ -11,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r message=FALSE, warning=FALSE}
-library(srvyr)               
+library(srvyr)
 library(ggplot2)
 library(ggpubr)
 library(dplyr)
@@ -124,7 +126,7 @@ Variáveis de Doenças Crônicas
    + `1` - Sim
    + `2` - Apenas durante a gravidez (só para mulheres)
    + `3` - Não
-   + `0` -  Não aplicavel
+            Não aplicavel
 * `Q060`	- Algum médico já lhe deu o diagnóstico de colesterol alto?
    + `1` - Sim
    + `2` - Não
@@ -134,6 +136,11 @@ Variáveis de Doenças Crônicas
    + `2` - Não
             Não aplicavel
 * `Q124`	- Algum médico já lhe deu o diagnóstico de insuficiência renal crônica?
+   + `1` - Sim
+   + `2` - Não
+            Não aplicavel
+            
+* `R039`	-R39. Durante a sua vida, a sra já ficou grávida (mesmo que a gravidez não tenha chegado até o final)?
    + `1` - Sim
    + `2` - Não
             Não aplicavel
@@ -181,10 +188,23 @@ pns_design_srvyr <- as_survey_design(pns_design)
 
 Ao invés de utilizarmos diretamente o peso como uma variável de comparação, vamos utilizar o Índice de Massa Corporal (IMC), definido como: 
 
+$$\mbox{IMC} = \frac{\mbox{peso}}{\mbox{altura}^2}$$
+
 ```{r  echo = FALSE}
 pns_design_srvyr <- pns_design_srvyr %>% mutate(imc = w00103/(w00203/100*w00203/100)) 
-
 ```
+
+Vamos considerar também as faixas do IMC definidas pela Organização Mundial da Saúde, conforme mostrado na tabela a seguir:
+
+Classificação        |  Faixa de Peso    |       Sintomas
+---------------------|-------------------|----------------------------------------------------
+Muito abaixo do peso |16 a 16,9 kg/m2    | Queda de cabelo, infertilidade, ausência menstrual
+Abaixo do peso       |17 a 18,4 kg/m2    | Fadiga, stress, ansiedade
+Peso normal          |18,5 a 24,9 kg/m2  | Menor risco de doenças cardíacas e vasculares
+Acima do peso        |25 a 29,9 kg/m2    | Fadiga, má circulação, varizes
+Obesidade Grau I     |30 a 34,9 kg/m2    | Diabetes, angina, infarto, aterosclerose
+Obesidade Grau II    |35 a 40 kg/m2      | Apneia do sono, falta de ar
+Obesidade Grau III   |maior que 40 kg/m2 | Refluxo, dificuldade para se mover, escaras, diabetes, infarto, AVC
 
 ```{r echo=FALSE }
 pns_design_srvyr <- pns_design_srvyr %>% 
@@ -199,10 +219,25 @@ pns_design_srvyr <- pns_design_srvyr %>%
 
 ```
 
+### Faixa etária
 
+Uma outra classificação interessante é por faixa etária. Temos uma classificação publicada pela Revista Exame no artigo de Novembro de 2016 baseado nos dados da PNAD 2015  [Um retrato do Brasil e do brasileiro, segundo o IBGE](https://exame.abril.com.br/brasil/um-retrato-do-brasil-e-do-brasileiro-segundo-o-ibge/)
+
+No artigo mencionado são considerados os seguintes grupos etários:
+
+Faixa   |   Classe Aqui
+--------|-----------------
+0--4    |  2
+5--9    |  7
+10--14  |  12
+15--19  |  18
+20--24  |  22
+25--39  |  32
+40--59  |  50
+60+     |  60
 
 ```{r echo=FALSE}
-# Criando uma variavel idade numerica
+# Criando uma variavel de faixa etaria
 pns_design_srvyr <- pns_design_srvyr %>% mutate(idade = as.numeric(c008))
 pns_design_srvyr <- pns_design_srvyr %>% 
      mutate(fxetaria = case_when(idade <   5.0 ~ "2",
@@ -216,34 +251,118 @@ pns_design_srvyr <- pns_design_srvyr %>%
       
 ```
 
-## Distribuição de pessoas por região
+
+
+## Tabulações
+
+### Prevalência de pessoas com diabetes
+
+Para verificarmos se nossas métricas estão corretas buscamos referência sobre a análise de diabetes pela PNS através de outras fontes:
+   
+>**No Brasil, conforme narra o artigo, dados recentes da Pesquisa Nacional em Saúde (PNS) de 2013 estimou a prevalência de DM em 6,2% dos participantes com 18 anos ou mais.**
+   
+Fiocruz:
+   https://portal.fiocruz.br/noticia/diabetes-pesquisa-avalia-os-fatores-associados-qualidade-de-vida
+
+Esse valor demonstra a consistência das nossas análises como vemos no gráfico abaixo onde a taxa de diabéticos correspondeu ao do estudos publicados pela Fiocruz.
+   
+Utilizamos a variável `q030` que identifica se o partitipante já foi diagnosticado com Diabetes por algum médico. Os valores `não aplicável` demonstra as pessoas que nunca fizeram exames de sangue, definidas pela variável `q029` que pergunta quando foi a última vez que a pessoa fez exame de sangue. 
+
 
 ```{r echo=FALSE}
-tir <- svytable(~ fxetaria + region, pns_design_srvyr)
+# q030 variável de diagnostico de diabetes
+tir <- svytable(~ q030, pns_design_srvyr)
 tir.df <- as.data.frame(tir)
-tir.spread <- spread(tir.df, region, Freq  )
-kable(tir.spread, digits = 3, col.names = c("Faixa Etaria", "Norte","Nordeste","Sudeste","Sul","Centro-Oeste"), caption = "Distribuição da População por Classe de IMC por Regiões do Brasil")
+tir.df$q030 <- c("Não Aplicável", "Diabético", "Diabete Gestacional", "Não Diabético")
+tir.df$Freq <- tir.df$Freq / sum(tir.df$Freq) 
+
+p <-ggplot(data=tir.df, aes(x=q030, y=Freq*100, fill = q030)) +
+  geom_bar(stat="identity") +
+  geom_text(aes(label=round(Freq*100, digits = 1)), vjust=-0.5, color="black", size=3.5)+ 
+  labs_pubr() + theme_pubr()
+p
+
 ```
+
+### Porcentagem de Diagnóstico de Diabetes por sexo
+   
+Em termos de distribuição da taxa de diabéticos em relação ao sexo chegamos a uma taxa de 5,4% para os homens e 7% para as mulheres. Ambos os resultados correspondem com a análise do artigo abaixo.
+   
+Para o cáculo utilizamos a variável `c006` que representa o sexo do entrevistado e a variável `q030` utilizada na análise anterior.
+   
+Artigo:
+   http://www.scielo.br/scielo.php?pid=s2237-96222015000200305&script=sci_abstract&tlng=pt
+   
+
 ```{r echo=FALSE}
-g <- ggplot(data = tir.df) + geom_bar(aes(x = region, y = Freq/1000, fill = fxetaria), stat = "identity",  position = "dodge") + labs(x = "Região",y = "Pessoas (x1000)", title = "Distribuição da População por Faixa Etaria por Regiões do Brasil", fill = "Faixa Etaria") +  labs_pubr() + theme_pubr()
-g
+
+# c006 variavel do sexo do individuo
+
+diab_sexo <- survey::svytable(~ q030 + c006, pns_design_srvyr)
+diab_sexo.df <- as.data.frame(diab_sexo)
+
+
+diab_sexo.df[diab_sexo.df$c006 == "masculino",c("Freq")] <- diab_sexo.df[diab_sexo.df$c006 == "masculino",c("Freq")]/sum(diab_sexo.df[diab_sexo.df$c006 == "masculino",c("Freq")] )
+                                                                                                         diab_sexo.df[diab_sexo.df$c006 == "feminino",c("Freq")] <- diab_sexo.df[diab_sexo.df$c006 == "feminino",c("Freq")]/sum(diab_sexo.df[diab_sexo.df$c006 == "feminino",c("Freq")] )                                 
+                                                                                       
+diab_sexo.df$q030 <-  c("Não Aplicável", "Diabético", "Diabete Gestacional", "Não Diabético", "Não Aplicável", "Diabético", "Diabete Gestacional", "Não Diabético")
+
+                                                                                                         
+p1 <-ggplot(data=diab_sexo.df, aes(x=q030, y=Freq*100 ,fill=c006)) +
+  geom_bar(position="dodge", stat="identity") +
+  geom_text(aes(label=round(Freq*100, digits = 1)), position=position_dodge(width=0.9), vjust=-0.5, color="black", size=3.5)+
+  theme_minimal()+
+  ggtitle("Porcentagem diabetes em relação ao sexo") +
+  xlab("Categoria") + ylab("Porcentagem %") 
+
+
+p1
+
+```
+
+
+
+### Procentagem de diabéticos por Faixa Etária
+
+No atlas do IDF de 2017 mostrou-se que na população mundial acima dos 65 anos a taxa de prevalência de diabetes é de 19%, bem próximo da nossa análise de 18,1% para a população com 60 anos ou mais.
+
+fonte:
+   https://www.diabetes.org.br/profissionais/images/2018/poster-atlas-idf-2017.pdf
+
+```{r echo=FALSE}
+
+fxetaria_diab.df = as.data.frame(svytable(~fxetaria + q030, pns_design_srvyr))
+
+grp <- group_by(fxetaria_diab.df, fxetaria) %>% summarise(freq = sum(Freq))
+
+fxetaria_diab.df <- fxetaria_diab.df[fxetaria_diab.df$q030 == "1",]
+
+fxetaria_diab.df$Freq <- fxetaria_diab.df$Freq/grp$freq
+
+fxetaria_diab.df <- fxetaria_diab.df[-2]
+
+p <- ggplot(data=fxetaria_diab.df, aes(x=fxetaria, y=Freq * 100, fill = fxetaria)) +     
+   geom_bar( stat = "identity",  position = "dodge")+  geom_text(aes(label=round(Freq*100, digits = 1)), position=position_dodge(width=0.9), vjust=-0.5, color="black", size=3.5)
+
+p
+
 ```
 
 
                                 
 ### Frequência de Atividade Física
 
-Para permitir uma melhor análise do impacto da atividade física nas doenças crônicas, criamos uma nova variável que permita relacionar a frequência de modo direto, já que a variável original `m016` apresenta uma codificação não invertida.
+Para permitir uma melhor análise da relação da atividade física com a diabetes, criamos uma nova variável que permita relacionar a frequência de modo direto, já que a variável original `m016` apresenta uma codificação não invertida.
 
 
 Valor Original    |      Codificação Original         | Novo Valor    | Codificação Variável `freqativ`
 ------------------|-----------------------------------|---------------|----------------------------------------
- 1       |  mais de uma vez por semana       |     5      |  mais de uma vez por semana
- 2       |  uma vez por semana               |     4      |  uma vez por semana
- 3       |  de 2 a 3 vezes por mês           |     3      |  de 2 a 3 vezes por mês
- 4       |  algumas vezes no ano             |     2      |  algumas vezes no ano
- 5       |  uma vez no ano                   |     1      |    uma vez no ano
- 6       |   nenhuma vez                     |     0      |     nenhuma vez
+ 1                |  mais de uma vez por semana       |     5      |  mais de uma vez por semana
+ 2                |  uma vez por semana               |     4      |  uma vez por semana
+ 3                |  de 2 a 3 vezes por mês           |     3      |  de 2 a 3 vezes por mês
+ 4                |  algumas vezes no ano             |     2      |  algumas vezes no ano
+ 5                |  uma vez no ano                   |     1      |    uma vez no ano
+ 6                |   nenhuma vez                     |     0      |     nenhuma vez
 
 ```{r echo=FALSE }
 
@@ -258,163 +377,169 @@ pns_design_srvyr <- pns_design_srvyr %>% mutate(freqativ = case_when(m016 == 6 ~
 
 ```
 
-#Frequencia de atividade fisica por idade
-```{r echo=FALSE}
-tff <- svytable(~ freqativ + fxetaria, pns_design_srvyr)
-tff.df <- as.data.frame(tff)
-tff.spread <- spread(tff.df, fxetaria, Freq  )
+### Taxa de diabéticos por frequencia de atividade física
 
-g <- ggplot(data = tff.df) + geom_bar(aes(x = fxetaria, y = Freq/1000, fill = freqativ), stat = "identity",  position = "dodge") + labs(x = "Faixa Etaria",y = "Pessoas (x1000)", title = "Distribuição da População por Frequencia de Ativ Fisica por Faixa Etaria", fill = "Freq Ativ Fisica") +  labs_pubr() + theme_pubr()
+   Um dos fatores preditores que podem indicar se uma pessoa é propensa ou não a desenvolver a diabetes é se ela pratica ou não atividade física. Mais de 80% dos diabéticos não praticam atividades físicas, mas vemos que há um aumento dos diabéticos que mantém uma frequencia de 1 vez por semana ou mais. 
+   Como demonstrado no artigo abaixo, realizar atividades físicas é essencial para ajudar no bom controle da doença e garantir uma boa qualidade de vida. 
+   
+Artigo:
+   https://www.diabetes.org.br/publico/meu-esporte-minha-vida/965-atividade-fisica-e-diabetes
+   
+```{r echo=FALSE}
+freq_diab <- survey::svytable(~ q030 + freqativ + fxetaria , pns_design_srvyr)
+freq_diab.df <- as.data.frame(freq_diab)
+
+freq_diab.df <- freq_diab.df[freq_diab.df$q030 == '1',]
+
+freq_diab.df$Freq <- freq_diab.df$Freq/sum(freq_diab.df$Freq)    
+
+g <- ggplot(data = freq_diab.df) + 
+   geom_bar(aes(x = freqativ, y = Freq, fill=fxetaria ), stat = "identity") +
+   labs(x = "Freq Ativ Fisica",y = "Pessoas %", title = "Frequencia de Ativ Fisica x Diabeticos") 
 g
 
 ```
 
-## Tabulações dos Dados
 
-### Verificação de consistência das análises
+## Taxa de diabéticos por região e por situação censitária
 
-```{r results= 'hide',  echo=FALSE}
-tabela.prop <- prop.table(svytable(~ imcclass + region, pns_design_srvyr))
-obesos.perc <- as_tibble(tabela.prop) %>% filter(imcclass >= 4) %>% summarise(tot = sum(n))
-```
-
-Para fins de consistência, buscou-se notícias sobre a obesidade no Brasil com base na Pesquisa Nacional de Saúde 2013 e foram encontradas algumas informações.
-
-Por exemplo, o G1 da Globo colocou esta notícia na seção **Bem Estar**, em 21 de Agosto de 2015:
-
-> **56,9% dos brasileiros têm excesso de peso, diz pesquisa de saúde do IBGE**
-
-O link para a reportagem é:
-
-`http://g1.globo.com/bemestar/noticia/2015/08/569-dos-brasileiros-tem-excesso-de-peso-diz-pesquisa-de-saude-do-ibge.html`
-
-**Utilizando os dados originais da PNS, isto é, os dados baixados do IBGE e preparados para esta análise  (microdados), este índice foi calculado como** `r round(obesos.perc*100, 2)`%, ou seja, foi possível reproduzir os resultados divulgados pelo IBGE. Neste cálculo são considerados todos que estão com IMC 4 ou mais.
-
-Outras análises e tabulações do IBGE também foram utilizadas para comparação e verificação da consistência dos resultados obtidos, indicando que a metodologia e ferramentas utilizadas aqui estão de acordo com o que é realizado pelo próprio IBGE.
-
-### Distribuição da População por Classe de IMC por Região do Brasil
-
-Em termos de distribuição por Regiões do Brasil, temos os seguintes resultados:
 
 ```{r echo=FALSE}
-tabela <- svytable(~ imcclass + region, pns_design_srvyr)
-tb.df <- as.data.frame(tabela)
-tb.spread <- spread(tb.df, region, Freq  )
-kable(tb.spread, digits = 3, col.names = c("Classe IMC", "Norte","Nordeste","Sudeste","Sul","Centro-Oeste"), caption = "Distribuição da População por Classe de IMC por Regiões do Brasil")
-```
-```{r echo=FALSE}
-#* `Q030`	- Algum médico já lhe deu o diagnóstico de diabetes?
-#   + `1` - Sim
-#   + `2` - Apenas durante a gravidez (só para mulheres)
-#   + `3` - Não
-#   + `0` -  Não aplicavel
 
-tir <- svytable(~ q030, pns_design_srvyr)
-tir.df <- as.data.frame(tir)
-tir.df$q030 <- c("Não aplicável", "Diabético", "Diabetes gestacional", "Não diabético")
-tir.df$Freq <- tir.df$Freq / sum(tir.df$Freq)
+dist_populacao <- as.data.frame(survey::svytable(~region + v0026, pns_design_srvyr ))
 
-p <-ggplot(data=tir.df, aes(x=q030, y=Freq*100)) +
-  geom_bar(stat="identity", fill="steelblue") +
-  geom_text(aes(label=round(Freq*100, digits = 1)), vjust=-0.5, color="black", size=3.5)+
-  theme_minimal()
-p
+pop_aux1 <- dist_populacao[dist_populacao$v0026 == 1,]
+colnames(pop_aux1) <- c("Regiao", "Urbano", "Freq_Urbano")
+
+pop_aux2 <- dist_populacao[dist_populacao$v0026 == 2,]
+colnames(pop_aux2) <- c("Regiao", "Rural", "Freq_Rural")
+
+dist_populacao <- cbind(pop_aux1,pop_aux2[, c("Rural", "Freq_Rural")])
+
+dist_populacao$total <- dist_populacao$Freq_Urbano + dist_populacao$Freq_Rural
+
+dist_populacao[,c("Regiao", "Freq_Urbano", "Freq_Rural")]
+
 ```
+
+   Dos aproximadamente 146 milhões de brasileiros acima de 18 anos, cerca de 64 milhões(44%) estão no sudeste, isso implica que a quantidade de diabéticos nessa região vai muito maior do que as outras regiões como vemos no gráfico abaixo. Cerca de 49.7% dos diabéticos residem no sudeste brasileiro.
+
+
 ```{r echo=FALSE}
 #* `Q030`	- Algum médico já lhe deu o diagnóstico de diabetes?
 #   + `1` - Sim
 #region
-
-diab_estados <- svytable(~ q030 + region, pns_design_srvyr)
+diab_estados <- survey::svytable(~ q030 + region + v0026, pns_design_srvyr )
 diab_estados.df <- as.data.frame(diab_estados)
+
 diab_estados.df <- diab_estados.df[diab_estados.df$q030 == '1',]
-diab_estados.df$Freq <- diab_estados.df$Freq / sum(diab_estados.df$Freq)
+#diab_estados.df$Freq <- diab_estados.df$Freq / sum(diab_estados.df$Freq)
 
-p <-ggplot(data=diab_estados.df, aes(x=region, y=Freq*100)) +
-  geom_bar(stat="identity", fill="steelblue") +
-  geom_text(aes(label=round(Freq*100, digits = 1)), vjust=-0.5, color="black", size=3.5)+
-  theme_minimal()
+diab_estados.df$v0026 = as.character(diab_estados.df$v0026)
+diab_estados.df$v0026[diab_estados.df$v0026 == 1]  = "1 - Urbano"
+diab_estados.df$v0026[diab_estados.df$v0026 == 2]  = "2 - Rural"
+
+
+p <-ggplot(data=diab_estados.df, aes(x=region, y=Freq/1000, fill=v0026)) +
+  geom_bar(stat="identity") +
+  geom_text(aes(label=round(Freq/1000, digits = 1)), vjust=1, color="black", size=3.5)
 p
 
 ```
-```{r echo=FALSE}
-#* `Q030`	- Algum médico já lhe deu o diagnóstico de diabetes?
-#   + `1` - Sim
-#V0026 - Tipo de situacao censitaria
 
-diab_censit <- svytable(~ q030 + v0026, pns_design_srvyr)
-diab_censit.df <- as.data.frame(diab_censit)
-diab_censit.df <- diab_censit.df[diab_censit.df$q030 == '1',]
-diab_censit.df$v0026 <- c("Urbano", "Rural")
-diab_censit.df$Freq <- diab_censit.df$Freq / sum(diab_censit.df$Freq)
+## Distribuição das taxas de diabéticos por estado
 
-p <-ggplot(data=diab_censit.df, aes(x=v0026, y=Freq*100)) +
-  geom_bar(stat="identity", fill="steelblue") +
-  geom_text(aes(label=round(Freq*100, digits = 1)), vjust=-0.5, color="black", size=3.5)+
-  theme_minimal()
-p
-```
+   Como demonstrado no artigo acima as maiores taxas de diabéticos do Brasil estão em Mato Grosso do Sul, São Paulo e Rio Grande do Sul respectivamente. Esses dados correspondem com as taxas demonstrados no gráfico abaixo.
+
 ```{r echo=FALSE}
 #* `Q030`	- Algum médico já lhe deu o diagnóstico de diabetes?
 #   + `1` - Sim
 #   + V0001 - Unidade da Federação
-
 library(brazilmaps)
 mapa <- get_brmap("State")
 
-diab_estados <- svytable(~ v0001 + q030 , pns_design_srvyr)
-diab_estados.df <- as.data.frame(diab_estados)
-diab_estados.df <- diab_estados.df[diab_estados.df$q030 == '1',]
-diab_estados.df$Freq <- (diab_estados.df$Freq / sum(diab_estados.df$Freq))*100
+diab_estados <- as.data.frame(survey::svytable(~ v0001 + q030 , pns_design_srvyr))
+qtd_estados = aggregate(diab_estados$Freq, by=list(Category=diab_estados$v0001), FUN=sum)
+
+diab_estados <- diab_estados[diab_estados$q030 == 1,]
+
+diab_estados$Porcent <- diab_estados$Freq / qtd_estados$x
+
 
 teste <- toupper(c("Rondônia","Acre","Amazonas","Roraima","Pará","Amapá","Tocantins","Maranhão","Piauí","Ceará",
           "Rio Grande do Norte","Paraíba","Pernambuco","Alagoas","Sergipe","Bahia","Minas Gerais","Espírito Santo","Rio de Janeiro","São Paulo","Paraná","Santa Catarina","Rio Grande do Sul","Mato Grosso do Sul",
           "Mato Grosso","Goiás","Distrito Federal"))
-teste <- as.data.frame(teste)
-teste$Freq <- diab_estados.df$Freq
 
-uf_map <- get_brmap("State") %>% 
-  inner_join(teste, c("nome" = "teste"))
+porc_est <- as.data.frame(teste)
+porc_est$Porcent <- diab_estados$Porcent
+##
+##uf_map <- get_brmap("State") %>% 
+#  inner_join(porc_est, c("nome" = "teste"))
 
-uf_map %>% 
-  ggplot() +
-  geom_sf(aes(fill = Freq/100))+
-  scale_fill_continuous(low = "lightblue", high = "darkblue") 
- 
-#estados<-readOGR("data/estados_br", "UFEBRASIL", encoding = "utf8")
+#uf_map %>% 
+#  ggplot(aes(fill = Porcent)) +
+#  geom_sf() +
+#  scale_fill_continuous(low = "lightblue", high = "darkblue") 
 
-#diab_estados <- svytable(~ v0001 + q030 , pns_design_srvyr)
-#diab_estados.df <- as.data.frame(diab_estados)
-#diab_estados.df <- diab_estados.df[diab_estados.df$q030 == '1',]
-#diab_estados.df$Freq <- diab_estados.df$Freq / sum(diab_estados.df$Freq)
+plot_brmap(get_brmap("State"), data_to_join = porc_est, join_by = c("nome" = "teste"),
+var = "Porcent") + scale_fill_continuous(low = "lightblue", high = "darkblue") 
+
+
 
 ```
+
+
+
+## Distribuição da idade de diagnóstico de Diabetes
+
+Temos o gráfico que demonstra a idade que as pessoas foram diagnosticadas com a doença. Acima dos 30 anos é que os diagnósticos são mais realizados e tendo seu pico próximo aos 50 anos. Como idade é um dos fatores preditivos, faz sentido que com o passar dos anos a quantidade de diagnósticos aumente.
 
 ```{r echo=FALSE}
-g <- ggplot(data = tb.df) + geom_bar(aes(x = region, y = Freq/1000, fill = imcclass), stat = "identity",  position = "dodge") + labs(x = "Região",y = "Pessoas (x1000)", title = "Distribuição da População por Classe de IMC por Regiões do Brasil", fill = "Classe IMC") +  labs_pubr() + theme_pubr()
-g
 
+survey::svyhist(~as.numeric(q031), subset(pns_design_srvyr, q030==1))
+dens <- survey::svysmooth(~as.numeric(q031), subset(pns_design_srvyr, (q030==1) & (q030!=" ")))
+lines(dens,col="blue",lwd=2)
 
 ```
 
-```{r echo = FALSE }
-tabelaimcreg.prop <- prop.table(svytable(~ imcclass + region, pns_design_srvyr))
-kable(cbind(tb.spread$imcclass,addmargins(tabelaimcreg.prop*100, 2)), digits = 2, caption = "Proporção de Distribuição da População por Classe de IMC por Regiões do Brasil", col.names = c("Classe IMC", "Norte","Nordeste","Sudeste","Sul","Centro-Oeste", "Total (%)"))
+``` {r echo=FALSE}
+
+#Separando a base de dados
+
+df = pns_design_srvyr[ ,c("c006", "c009", "d009", "w00103", "w00203", "p009", "p018", "p020", "p025", "p026", "p028", "p035", "p050", "q002", "q029", "q060", "q068", "q124","r039", "w00407", "w00408", "freqativ", "fxetaria", "idade", "imc", "q030")]
+
+
+
+names(df$variables) = c("sexo","cor_raca", "escolaridade", "peso", "altura", "come_verduras", "come_frutas", "refrigerante_suco", "alimentos_doces", "substitui_refeicoes", "bebida_alcoolica", "dias_semana_ativ_fisica", "fumante", "pressao_alta", "exames_glicemia", "colesterol_alto", "avc", "insuficiencia_renal", "ja_ficou_gravida", "pressao_sistolica", "pressao_diastolica", "freqativ", "fxetaria", "idade", "imc", "diagnostico_diabetes")
+
 ```
 
-### Faixas Etárias por Região do Brasil
+## Data Prep
 
-Em termos de distribuição por Regiões do Brasil, temos os seguintes resultados:
+```{r echo=FALSE}
 
+# pressao alta = q002
 
-```{r  echo=FALSE}
-tabela.fxet <- svytable(~ fxetaria + region, pns_design_srvyr)
-tbfxet.df <- as.data.frame(tabela.fxet)
-tbfxet.spread <- spread(tbfxet.df, region, Freq  )
-kable(tbfxet.spread, digits = 3, col.names = c("Faixa Etaria", "Norte","Nordeste","Sudeste","Sul","Centro-Oeste"),  caption = "Distribuição da População por Faixa Etária (acima de 18 anos) por Regiões do Brasil")
+df$variables$escolaridade = as.numeric(df$variables$escolaridade)
+df$variables[is.na(df$variables$escolaridade), c("escolaridade")] = 0
+df$variables[is.na(df$variables$bebida_alcoolica), c("bebida_alcoolica")] = 0
+df$variables[is.na(df$variables$dias_semana_ativ_fisica), c("dias_semana_ativ_fisica")] = 0
+df$variables[df$variables$ja_ficou_gravida == " ", c("ja_ficou_gravida")] = 0
+
 ```
 
-```{r  echo=FALSE}
-g <- ggplot(data = tbfxet.df) + geom_bar(aes(x = region, y = Freq/1000, fill = fxetaria), stat = "identity",  position = "dodge") + labs(x = NULL,y = "Pessoas (x1000)", title = "Distribuição da População por Faixa Etária (acima de 18 anos) \npor Regiões do Brasil", fill = "Faixa Etária") +  labs_pubr() + theme_pubr() #+ theme(legend.position = "right")
-g
+```{r}
+
+# % de perda de diabeticos
+perda_diabeticos = df$variables[(df$variables$pressao_alta == " " | df$variables$colesterol_alto == " ") & df$variables$diagnostico_diabetes == 1, c("pressao_alta", "colesterol_alto", "diagnostico_diabetes")]
+
+# 
+perda_total = df$variables[(df$variables$pressao_alta == " " | df$variables$diagnostico_diabetes == " " | df$variables$colesterol_alto == " "), c("pressao_alta", "colesterol_alto", "diagnostico_diabetes")]
+
+
+perda_t <- as.data.frame(survey::svytable(~pressao_alta + colesterol_alto + diagnostico_diabetes , df))
+perda_d <- as.data.frame(survey::svytable(~pressao_alta + colesterol_alto + diagnostico_diabetes, subset(df, diagnostico_diabetes==1)))
+
 ```
+
+
