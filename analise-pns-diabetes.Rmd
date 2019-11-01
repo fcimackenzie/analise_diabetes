@@ -1,9 +1,11 @@
 ---
 title: "Análise, PNS - DIABETES"
-subtitle: "Data Prep"
 author: "Diego Aguirre, Gabriel Rodrigues, Henrique Alves"
-date: "2019"
-output: html_document
+date: '2019'
+output:
+  pdf_document: default
+  html_document: default
+subtitle: Data Prep
 ---
 
 ```{r setup, include=FALSE}
@@ -134,6 +136,11 @@ Variáveis de Doenças Crônicas
    + `2` - Não
             Não aplicavel
 * `Q124`	- Algum médico já lhe deu o diagnóstico de insuficiência renal crônica?
+   + `1` - Sim
+   + `2` - Não
+            Não aplicavel
+            
+* `R039`	-R39. Durante a sua vida, a sra já ficou grávida (mesmo que a gravidez não tenha chegado até o final)?
    + `1` - Sim
    + `2` - Não
             Não aplicavel
@@ -314,6 +321,7 @@ p1
 ```
 
 
+
 ### Procentagem de diabéticos por Faixa Etária
 
 No atlas do IDF de 2017 mostrou-se que na população mundial acima dos 65 anos a taxa de prevalência de diabetes é de 19%, bem próximo da nossa análise de 18,1% para a população com 60 anos ou mais.
@@ -464,14 +472,18 @@ teste <- toupper(c("Rondônia","Acre","Amazonas","Roraima","Pará","Amapá","Toc
 
 porc_est <- as.data.frame(teste)
 porc_est$Porcent <- diab_estados$Porcent
+##
+##uf_map <- get_brmap("State") %>% 
+#  inner_join(porc_est, c("nome" = "teste"))
 
-uf_map <- get_brmap("State") %>% 
-  inner_join(porc_est, c("nome" = "teste"))
+#uf_map %>% 
+#  ggplot(aes(fill = Porcent)) +
+#  geom_sf() +
+#  scale_fill_continuous(low = "lightblue", high = "darkblue") 
 
-uf_map %>% 
-  ggplot() +
-  geom_sf(aes(fill = Porcent)) +
-  scale_fill_continuous(low = "lightblue", high = "darkblue") 
+plot_brmap(get_brmap("State"), data_to_join = porc_est, join_by = c("nome" = "teste"),
+var = "Porcent") + scale_fill_continuous(low = "lightblue", high = "darkblue") 
+
 
 
 ```
@@ -494,20 +506,40 @@ lines(dens,col="blue",lwd=2)
 
 #Separando a base de dados
 
-df = pns_design_srvyr[,c("c006", "c009", "p035", "w00103", "w00203", "w00303", "j004", "p020", "p021", "p022", "p025", "p027", "p028", "p029", "p03701", "p03702", "q002", "q029", "q030", "q060", "q068", "q124", "s020", "s021", "w00407", "w00408", "freqativ", "fxetaria", "idade", "imc")]
+df = pns_design_srvyr[ ,c("c006", "c009", "d009", "w00103", "w00203", "p009", "p018", "p020", "p025", "p026", "p028", "p035", "p050", "q002", "q029", "q060", "q068", "q124","r039", "w00407", "w00408", "freqativ", "fxetaria", "idade", "imc", "q030")]
 
-names(df$variables) = c("sexo","cor_raca","dias_ativ_fisica","peso_final","altura_final","circ_cintura_final","impedimento_ativ_fisica","refrigerante_suco","tipo_refrigerante","qtd_copos","freq_doces","freq_bebida_alcoolica","dias_semana_alcool","doses_bebida_alcoolica","horas_exercicio_fisico","min_exercicio_fisico","hipertensao_arterial","ultimo_exame_glicemia","diag_diabeticos","diag_colesterol_alto","diag_avc_derrame","diag_insuficiencia_renal","exame_sangue_prenatal","diabetes_prenatal","pressao_arterial_sistolica","pressao_arterial_diastolica","freqativ","fxetaria","idade","imc")
+
+
+names(df$variables) = c("sexo","cor_raca", "escolaridade", "peso", "altura", "come_verduras", "come_frutas", "refrigerante_suco", "alimentos_doces", "substitui_refeicoes", "bebida_alcoolica", "dias_semana_ativ_fisica", "fumante", "pressao_alta", "exames_glicemia", "colesterol_alto", "avc", "insuficiencia_renal", "ja_ficou_gravida", "pressao_sistolica", "pressao_diastolica", "freqativ", "fxetaria", "idade", "imc", "diagnostico_diabetes")
 
 ```
 
-## Tratamento de missings
+## Data Prep
 
 ```{r echo=FALSE}
 
+# pressao alta = q002
 
+df$variables$escolaridade = as.numeric(df$variables$escolaridade)
+df$variables[is.na(df$variables$escolaridade), c("escolaridade")] = 0
+df$variables[is.na(df$variables$bebida_alcoolica), c("bebida_alcoolica")] = 0
+df$variables[is.na(df$variables$dias_semana_ativ_fisica), c("dias_semana_ativ_fisica")] = 0
+df$variables[df$variables$ja_ficou_gravida == " ", c("ja_ficou_gravida")] = 0
 
 ```
 
+```{r}
 
+# % de perda de diabeticos
+perda_diabeticos = df$variables[(df$variables$pressao_alta == " " | df$variables$colesterol_alto == " ") & df$variables$diagnostico_diabetes == 1, c("pressao_alta", "colesterol_alto", "diagnostico_diabetes")]
+
+# 
+perda_total = df$variables[(df$variables$pressao_alta == " " | df$variables$diagnostico_diabetes == " " | df$variables$colesterol_alto == " "), c("pressao_alta", "colesterol_alto", "diagnostico_diabetes")]
+
+
+perda_t <- as.data.frame(survey::svytable(~pressao_alta + colesterol_alto + diagnostico_diabetes , df))
+perda_d <- as.data.frame(survey::svytable(~pressao_alta + colesterol_alto + diagnostico_diabetes, subset(df, diagnostico_diabetes==1)))
+
+```
 
 
