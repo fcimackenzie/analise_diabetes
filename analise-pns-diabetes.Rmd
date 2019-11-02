@@ -12,7 +12,7 @@ subtitle: Data Prep
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE, echo = FALSE}
 library(srvyr)
 library(ggplot2)
 library(ggpubr)
@@ -271,7 +271,7 @@ Utilizamos a variável `q030` que identifica se o partitipante já foi diagnosti
 
 ```{r echo=FALSE}
 # q030 variável de diagnostico de diabetes
-tir <- svytable(~ q030, pns_design_srvyr)
+tir <- survey::svytable(~ q030, pns_design_srvyr)
 tir.df <- as.data.frame(tir)
 tir.df$q030 <- c("Não Aplicável", "Diabético", "Diabete Gestacional", "Não Diabético")
 tir.df$Freq <- tir.df$Freq / sum(tir.df$Freq) 
@@ -331,7 +331,7 @@ fonte:
 
 ```{r echo=FALSE}
 
-fxetaria_diab.df = as.data.frame(svytable(~fxetaria + q030, pns_design_srvyr))
+fxetaria_diab.df = as.data.frame(survey::svytable(~fxetaria + q030, pns_design_srvyr))
 
 grp <- group_by(fxetaria_diab.df, fxetaria) %>% summarise(freq = sum(Freq))
 
@@ -502,44 +502,229 @@ lines(dens,col="blue",lwd=2)
 
 ```
 
+## Gravidez
+
+Avaliando a distribuição de gravidez pela classificação de diagnóstico de diabetes observamos q as mulheres que apresentaram diabetes na gravidez(2) possuem outliers muito mais expressivos que os outros grupos, chegando até a 18 o número de partos. A mediana mantém o mesmo entre todas as classes, mas tendo uma distancia interquartil menor entre as diabéticas.
+
+``` {r echo=FALSE}
+
+survey::svyboxplot(r043 ~ q030, subset(pns_design_srvyr, c006 == "feminino"), all.outliers=TRUE)
+
+```
+
+
+
 ``` {r echo=FALSE}
 
 #Separando a base de dados
 
-df = pns_design_srvyr[ ,c("c006", "c009", "d009", "w00103", "w00203", "p009", "p018", "p020", "p025", "p026", "p028", "p035", "p050", "q002", "q029", "q060", "q068", "q124","r039", "w00407", "w00408", "freqativ", "fxetaria", "idade", "imc", "q030")]
+df = pns_design_srvyr[ ,c("c006", "c009", "d009", "w00103", "w00203", "p009", "p018", "p020", "p025", "p026", "p028", "p035", "p050", "q002", "q029", "q060", "q068", "q124","r039", "freqativ", "fxetaria", "idade", "imc", "q030")]
 
 
 
-names(df$variables) = c("sexo","cor_raca", "escolaridade", "peso", "altura", "come_verduras", "come_frutas", "refrigerante_suco", "alimentos_doces", "substitui_refeicoes", "bebida_alcoolica", "dias_semana_ativ_fisica", "fumante", "pressao_alta", "exames_glicemia", "colesterol_alto", "avc", "insuficiencia_renal", "ja_ficou_gravida", "pressao_sistolica", "pressao_diastolica", "freqativ", "fxetaria", "idade", "imc", "diagnostico_diabetes")
+names(df$variables) = c("sexo_c006","cor_raca_c009", "escolaridade_d009", "peso_w00103", "altura_w00203", "come_verduras_p009", "come_frutas_p018", "refrigerante_suco_p020", "alimentos_doces_p025", "substitui_refeicoes_p026", "bebida_alcoolica_p028", "dias_semana_ativ_fisica_p035", "fumante_p050", "pressao_alta_q002", "exames_glicemia_q029", "colesterol_alto_q060", "avc_q068", "insuficiencia_renal_q124", "ja_ficou_gravida_r039", "freqativ", "fxetaria", "idade", "imc", "diagnostico_diabetes_q030")
 
 ```
 
 ## Data Prep
 
+### Preenchendo NAs
+
+* Variáveis d009, p028, p035 e r039 que eram NAs serão preenchidas com 0, já que demonstram uma ausência de seus valores.
 ```{r echo=FALSE}
 
 # pressao alta = q002
 
-df$variables$escolaridade = as.numeric(df$variables$escolaridade)
-df$variables[is.na(df$variables$escolaridade), c("escolaridade")] = 0
-df$variables[is.na(df$variables$bebida_alcoolica), c("bebida_alcoolica")] = 0
-df$variables[is.na(df$variables$dias_semana_ativ_fisica), c("dias_semana_ativ_fisica")] = 0
-df$variables[df$variables$ja_ficou_gravida == " ", c("ja_ficou_gravida")] = 0
-
-```
-
-```{r}
-
-# % de perda de diabeticos
-perda_diabeticos = df$variables[(df$variables$pressao_alta == " " | df$variables$colesterol_alto == " ") & df$variables$diagnostico_diabetes == 1, c("pressao_alta", "colesterol_alto", "diagnostico_diabetes")]
-
-# 
-perda_total = df$variables[(df$variables$pressao_alta == " " | df$variables$diagnostico_diabetes == " " | df$variables$colesterol_alto == " "), c("pressao_alta", "colesterol_alto", "diagnostico_diabetes")]
-
-
-perda_t <- as.data.frame(survey::svytable(~pressao_alta + colesterol_alto + diagnostico_diabetes , df))
-perda_d <- as.data.frame(survey::svytable(~pressao_alta + colesterol_alto + diagnostico_diabetes, subset(df, diagnostico_diabetes==1)))
+df$variables$escolaridade_d009 = as.numeric(df$variables$escolaridade_d009)
+df$variables[is.na(df$variables$escolaridade_d009), c("escolaridade_d009")] = 0
+df$variables[is.na(df$variables$bebida_alcoolica_p028), c("bebida_alcoolica_p028")] = 0
+df$variables[is.na(df$variables$dias_semana_ativ_fisica_p035), c("dias_semana_ativ_fisica_p035")] = 0
+df$variables[df$variables$ja_ficou_gravida_r039 == " ", c("ja_ficou_gravida_r039")] = 0
 
 ```
 
 
+
+* Variável c006(peso), será preenchida com a média das pessoas separadas pelo sexo(c006) e pela faixa etária(fxetaria).
+
+```{r echo=FALSE}
+
+df$variables$sexo_c006 <- as.character(df$variables$sexo_c006) 
+
+masc_18 = as.numeric(survey::svymean(~peso_w00103 ,subset(x = df, subset = fxetaria == 18 & sexo_c006 == "masculino"), na.rm=TRUE))
+masc_22 = as.numeric(survey::svymean(~peso_w00103 ,subset(x = df, subset = fxetaria == 22 & sexo_c006 == "masculino"), na.rm=TRUE))
+masc_32 = as.numeric(survey::svymean(~peso_w00103 ,subset(x = df, subset = fxetaria == 32 & sexo_c006 == "masculino"), na.rm=TRUE))
+masc_50 = as.numeric(survey::svymean(~peso_w00103 ,subset(x = df, subset = fxetaria == 50 & sexo_c006 == "masculino"), na.rm=TRUE))
+masc_60 = as.numeric(survey::svymean(~peso_w00103 ,subset(x = df, subset = fxetaria == 60 & sexo_c006 == "masculino"), na.rm=TRUE))
+
+
+femi_18 = as.numeric(survey::svymean(~peso_w00103 ,subset(x = df, subset = fxetaria == 18 & sexo_c006 == "feminino"), na.rm=TRUE))
+femi_22 = as.numeric(survey::svymean(~peso_w00103 ,subset(x = df, subset = fxetaria == 22 & sexo_c006 == "feminino"), na.rm=TRUE))
+femi_32 = as.numeric(survey::svymean(~peso_w00103 ,subset(x = df, subset = fxetaria == 32 & sexo_c006 == "feminino"), na.rm=TRUE))
+femi_50 = as.numeric(survey::svymean(~peso_w00103 ,subset(x = df, subset = fxetaria == 50 & sexo_c006 == "feminino"), na.rm=TRUE))
+femi_60 = as.numeric(survey::svymean(~peso_w00103 ,subset(x = df, subset = fxetaria == 60 & sexo_c006 == "feminino"), na.rm=TRUE))
+
+
+df$variables[df$variables$fxetaria == 18 & df$variables$sexo_c006 == "masculino" & is.na(df$variables$peso_w00103), c("peso_w00103")] = round(masc_18, digits = 1)
+df$variables[df$variables$fxetaria == 22 & df$variables$sexo_c006 == "masculino" & is.na(df$variables$peso_w00103), c("peso_w00103")] = round(masc_22, digits = 1)
+df$variables[df$variables$fxetaria == 32 & df$variables$sexo_c006 == "masculino" & is.na(df$variables$peso_w00103), c("peso_w00103")] = round(masc_32, digits = 1)
+df$variables[df$variables$fxetaria == 50 & df$variables$sexo_c006 == "masculino" & is.na(df$variables$peso_w00103), c("peso_w00103")] = round(masc_50, digits = 1)
+df$variables[df$variables$fxetaria == 60 & df$variables$sexo_c006 == "masculino" & is.na(df$variables$peso_w00103), c("peso_w00103")] = round(masc_60, digits = 1)
+
+
+df$variables[df$variables$fxetaria == 18 & df$variables$sexo_c006 == "feminino" & is.na(df$variables$peso_w00103), c("peso_w00103")] = round(femi_18, digits = 1)
+df$variables[df$variables$fxetaria == 22 & df$variables$sexo_c006 == "feminino" & is.na(df$variables$peso_w00103), c("peso_w00103")] = round(femi_22, digits = 1)
+df$variables[df$variables$fxetaria == 32 & df$variables$sexo_c006 == "feminino" & is.na(df$variables$peso_w00103), c("peso_w00103")] = round(femi_32, digits = 1)
+df$variables[df$variables$fxetaria == 50 & df$variables$sexo_c006 == "feminino" & is.na(df$variables$peso_w00103), c("peso_w00103")] = round(femi_50, digits = 1)
+df$variables[df$variables$fxetaria == 60 & df$variables$sexo_c006 == "feminino" & is.na(df$variables$peso_w00103), c("peso_w00103")] = round(femi_60, digits = 1)
+
+```
+
+* Variável w00203(altura), será preenchida com a média das pessoas separadas pelo sexo(c006) e pela faixa etária(fxetaria).
+
+```{r echo=FALSE}
+
+
+masc_18 = as.numeric(survey::svymean(~altura_w00203 ,subset(x = df, subset = fxetaria == 18 & sexo_c006 == "masculino"), na.rm=TRUE))
+masc_22 = as.numeric(survey::svymean(~altura_w00203 ,subset(x = df, subset = fxetaria == 22 & sexo_c006 == "masculino"), na.rm=TRUE))
+masc_32 = as.numeric(survey::svymean(~altura_w00203 ,subset(x = df, subset = fxetaria == 32 & sexo_c006 == "masculino"), na.rm=TRUE))
+masc_50 = as.numeric(survey::svymean(~altura_w00203 ,subset(x = df, subset = fxetaria == 50 & sexo_c006 == "masculino"), na.rm=TRUE))
+masc_60 = as.numeric(survey::svymean(~altura_w00203 ,subset(x = df, subset = fxetaria == 60 & sexo_c006 == "masculino"), na.rm=TRUE))
+
+
+femi_18 = as.numeric(survey::svymean(~altura_w00203 ,subset(x = df, subset = fxetaria == 18 & sexo_c006 == "feminino"), na.rm=TRUE))
+femi_22 = as.numeric(survey::svymean(~altura_w00203 ,subset(x = df, subset = fxetaria == 22 & sexo_c006 == "feminino"), na.rm=TRUE))
+femi_32 = as.numeric(survey::svymean(~altura_w00203 ,subset(x = df, subset = fxetaria == 32 & sexo_c006 == "feminino"), na.rm=TRUE))
+femi_50 = as.numeric(survey::svymean(~altura_w00203 ,subset(x = df, subset = fxetaria == 50 & sexo_c006 == "feminino"), na.rm=TRUE))
+femi_60 = as.numeric(survey::svymean(~altura_w00203 ,subset(x = df, subset = fxetaria == 60 & sexo_c006 == "feminino"), na.rm=TRUE))
+
+
+df$variables[df$variables$fxetaria == 18 & df$variables$sexo_c006 == "masculino" & is.na(df$variables$altura_w00203), c("peso_w00103")] = round(masc_18, digits = 1)
+df$variables[df$variables$fxetaria == 22 & df$variables$sexo_c006 == "masculino" & is.na(df$variables$altura_w00203), c("peso_w00103")] = round(masc_22, digits = 1)
+df$variables[df$variables$fxetaria == 32 & df$variables$sexo_c006 == "masculino" & is.na(df$variables$altura_w00203), c("peso_w00103")] = round(masc_32, digits = 1)
+df$variables[df$variables$fxetaria == 50 & df$variables$sexo_c006 == "masculino" & is.na(df$variables$altura_w00203), c("peso_w00103")] = round(masc_50, digits = 1)
+df$variables[df$variables$fxetaria == 60 & df$variables$sexo_c006 == "masculino" & is.na(df$variables$altura_w00203), c("peso_w00103")] = round(masc_60, digits = 1)
+
+
+df$variables[df$variables$fxetaria == 18 & df$variables$sexo_c006 == "feminino" & is.na(df$variables$altura_w00203), c("altura_w00203")] = round(femi_18, digits = 1)
+df$variables[df$variables$fxetaria == 22 & df$variables$sexo_c006 == "feminino" & is.na(df$variables$altura_w00203), c("altura_w00203")] = round(femi_22, digits = 1)
+df$variables[df$variables$fxetaria == 32 & df$variables$sexo_c006 == "feminino" & is.na(df$variables$altura_w00203), c("altura_w00203")] = round(femi_32, digits = 1)
+df$variables[df$variables$fxetaria == 50 & df$variables$sexo_c006 == "feminino" & is.na(df$variables$altura_w00203), c("altura_w00203")] = round(femi_50, digits = 1)
+df$variables[df$variables$fxetaria == 60 & df$variables$sexo_c006 == "feminino" & is.na(df$variables$altura_w00203), c("altura_w00203")] = round(femi_60, digits = 1)
+
+```
+
+### Inversão de valores de variáveis
+
+Para permitir e simplificar a análise a partir de um modelo alteraremos os valor de variáveis.
+
+`q002`, pressão alta:
+
+
+Valor Original    |      Codificação Original         | Novo Valor    | Codificação Variável `pressao_alta_q002`
+------------------|-----------------------------------|---------------|----------------------------------------
+ 1                |  sim                              |     1         |  sim
+ 2                |  apenas na gravidez               |     1         |  sim
+ 3                |  não                              |     0         |  não
+ 
+
+```{r echo=FALSE}
+
+df$variables[df$variables$pressao_alta_q002 == 2, c("pressao_alta_q002")] = 1
+df$variables[df$variables$pressao_alta_q002 == 3, c("pressao_alta_q002")] = 0
+
+```
+ 
+`q060`, colesterol alto:
+
+
+Valor Original    |      Codificação Original         | Novo Valor    | Codificação Variável `colesterol_alto_q060`
+------------------|-----------------------------------|---------------|----------------------------------------
+ 1                |  sim                              |     1         |  sim
+ 2                |  não                              |     0         |  não
+ 
+
+```{r echo=FALSE}
+
+df$variables[df$variables$colesterol_alto_q060 == 2, c("colesterol_alto_q060")] = 0
+
+```
+
+ 
+`q124`, insuficiencia renal:
+
+
+Valor Original    |      Codificação Original    | Novo Valor    | Codificação Variável `insuficiencia_renal_q124`
+------------------|-----------------------------------|---------------|----------------------------------------
+ 1                |  sim                              |     1         |  sim
+ 2                |  não                              |     0         |  não
+ 
+
+```{r echo=FALSE}
+
+df$variables[df$variables$insuficiencia_renal_q124 == 2, c("insuficiencia_renal_q124")] = 0
+
+```
+
+`p050`, fumante:
+definição de fumante: http://pepsic.bvsalud.org/scielo.php?script=sci_arttext&pid=S1413-03942014000200015
+
+Valor Original    |      Codificação Original    | Novo Valor    | Codificação Variável `fumante_p050`
+------------------|-----------------------------------|---------------|----------------------------------------
+ 1                |  sim, diariamente                  |     1         |  sim
+ 2                |  sim, menos que diariamente        |     0         |  não
+ 3                |  não fumo atualmente               |     0         |  não
+
+```{r echo=FALSE}
+
+df$variables[df$variables$fumante_p050 == 2 | df$variables$fumante_p050 == 3, c("fumante_p050")] = 0
+
+```
+
+
+
+`q068`, avc:
+
+Valor Original    |      Codificação Original    | Novo Valor    | Codificação Variável `ja_ficou_gravida_r039`
+------------------|------------------------------|---------------|----------------------------------------
+ 1                |  sim                         |     1         |  sim
+ 2                |  não                         |     0         |  não
+
+```{r echo=FALSE}
+
+df$variables[df$variables$avc_q068 == 2, c("avc_q068")] = 0
+
+```
+
+`q068`, gravidez:
+
+Valor Original    |      Codificação Original    | Novo Valor    | Codificação Variável `ja_ficou_gravida_r039`
+------------------|------------------------------|---------------|----------------------------------------
+ 1                |  sim                         |     1         |  sim
+ 2                |  não                         |     0         |  não
+
+```{r echo=FALSE}
+
+df$variables[df$variables$ja_ficou_gravida_r039 == 2, c("avc_q068")] = 0
+
+```
+
+# Decisão
+
+Definir como iremos tratar os valores faltantes das variáveis de Pressão Alta, Colesterol Alto e Diagnostico de Diabetes:
+
+```{r echo=FALSE}
+
+perda_t <- as.data.frame(survey::svytable(~pressao_alta_q002 + colesterol_alto_q060 + diagnostico_diabetes_q030 , df))
+
+print(paste0("quantidade total de diabéticos: ", sum(perda_t[perda_t$diagnostico_diabetes_q030 == 1, c("Freq")])) )
+print(paste0("perda de diabéticos: ", sum(perda_t[perda_t$diagnostico_diabetes_q030 == 1 & (perda_t$pressao_alta_q002 == " " | perda_t$colesterol_alto_q060 == " "), c("Freq")])) )
+print(paste0("porcentagem de perda de diabeticos: ", sum(perda_t[perda_t$diagnostico_diabetes_q030 == 1 & (perda_t$pressao_alta_q002 == " " | perda_t$colesterol_alto_q060 == " "), c("Freq")]) / sum(perda_t[perda_t$diagnostico_diabetes_q030 == 1, c("Freq")])  ))
+
+print("")
+
+print(paste0("quantidade total : ", sum(perda_t$Freq)))
+print(paste0("perda total: ", sum(perda_t[ (perda_t$pressao_alta_q002 == " " | perda_t$colesterol_alto_q060 == " " | perda_t$diagnostico_diabetes_q030 == " "), c("Freq")])) )
+print(paste0("porcentagem de perda total: ", sum(perda_t[(perda_t$pressao_alta_q002 == " " | perda_t$colesterol_alto_q060 == " " | perda_t$diagnostico_diabetes_q030 == " "), c("Freq")]) / sum(perda_t$Freq)))
+
+```
