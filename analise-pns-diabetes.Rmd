@@ -228,12 +228,12 @@ pns_design_srvyr <- pns_design_srvyr %>%
 
 Para verificarmos se nossas métricas estão corretas buscamos referência sobre a análise de diabetes pela PNS através de outras fontes:
    
->**No Brasil, conforme narra o artigo, dados recentes da Pesquisa Nacional em Saúde (PNS) de 2013 estimou a prevalência de DM em 6,2% dos participantes com 18 anos ou mais.**
+>**No Brasil, conforme narra o artigo, dados recentes da Pesquisa Nacional em Saúde (PNS) de 2013 estimou a prevalência de Diabetes Mellitus em 6,2% dos participantes com 18 anos ou mais.**
    
 Fiocruz:
    https://portal.fiocruz.br/noticia/diabetes-pesquisa-avalia-os-fatores-associados-qualidade-de-vida
 
-Esse valor demonstra a consistência das nossas análises como vemos no gráfico abaixo onde a taxa de diabéticos correspondeu ao do estudos publicados pela Fiocruz.
+A Fundação Oswaldo Cruz (Fiocruz) foi uma das responsáveis em parceria com o Instituto Brasileiro de Geografia e Estatística(IBGE) pela PNS. Esse valor demonstra a consistência das nossas análises como vemos no gráfico abaixo onde a taxa de diabéticos correspondeu ao do estudos publicados pela Fiocruz.
    
 Utilizamos a variável `q030` que identifica se o participante já foi diagnosticado com Diabetes por algum médico. Os valores `não aplicável` demonstra as pessoas que nunca fizeram exames de sangue, definidas pela variável `q029` que pergunta quando foi a última vez que a pessoa fez exame de sangue. 
 
@@ -254,8 +254,8 @@ p
 ```
 
 ### Porcentagem de Diagnóstico de Diabetes por sexo
-   
-Em termos de distribuição da taxa de diabéticos em relação ao sexo chegamos a uma taxa de 5,4% para os homens e 7% para as mulheres. Ambos os resultados correspondem com a análise do artigo abaixo.
+
+Realizando uma análise mais específica, obtivemos também consistência nos dados que dizem a respeita da taxa de diabéticos em relação ao sexo, como resultado obtivemos uma taxa de 5,4% para os homens e 7% para as mulheres. Para verificar a consistência dos dados utilizamos um artigo científico publicado na biblioteca virtual de saúde (SciELO).  
    
 Para o cálculo utilizamos a variável `c006` que representa o sexo do entrevistado e a variável `q030` utilizada na análise anterior.
    
@@ -293,7 +293,7 @@ p1
 
 ### Procentagem de diabéticos por Faixa Etária
 
-No atlas do IDF de 2017 mostrou-se que na população mundial acima dos 65 anos a taxa de prevalência de diabetes é de 19%, bem próximo da nossa análise de 18,1% para a população com 60 anos ou mais.
+Analisando a população brasileira por faixa etária e considerando apenas pessoas com 60 anos ou mais, obtivemos uma taxa de 18,1% do total dessa população-alvo são diabéticos, utilizando como referência o atlas do IDF de 2017 que utiliza a população acima dos 65 anos de idade que contabiliza um total de 19% de diabéticos, chegamos a valores muito próximos.
 
 fonte:
    https://www.diabetes.org.br/profissionais/images/2018/poster-atlas-idf-2017.pdf
@@ -326,13 +326,13 @@ Para permitir uma melhor análise da relação da atividade física com a diabet
 
 Valor Original    |      Codificação Original         | Novo Valor    | Codificação Variável `freqativ`
 ------------------|-----------------------------------|---------------|----------------------------------------
- 1                |  mais de uma vez por semana       |     5      |  mais de uma vez por semana
- 2                |  uma vez por semana               |     4      |  uma vez por semana
- 3                |  de 2 a 3 vezes por mês           |     3      |  de 2 a 3 vezes por mês
- 4                |  algumas vezes no ano             |     2      |  algumas vezes no ano
- 5                |  uma vez no ano                   |     1      |    uma vez no ano
- 6                |   nenhuma vez                     |     0      |     nenhuma vez
-
+ 1                |  mais de uma vez por semana       |     5         |  mais de uma vez por semana
+ 2                |  uma vez por semana               |     4         |  uma vez por semana
+ 3                |  de 2 a 3 vezes por mês           |     3         |  de 2 a 3 vezes por mês
+ 4                |  algumas vezes no ano             |     2         |  algumas vezes no ano
+ 5                |  uma vez no ano                   |     1         |  uma vez no ano
+ 6                |   nenhuma vez                     |     0         |  nenhuma vez
+ 
 ```{r echo=FALSE }
 
 pns_design_srvyr <- pns_design_srvyr %>% mutate(freqativ = case_when(m016 == 6 ~ 0, # Nenhuma vez
@@ -391,7 +391,7 @@ dist_populacao[,c("Regiao", "Freq_Urbano", "Freq_Rural")]
 
 ```
 
-   Dos aproximadamente 146 milhões de brasileiros acima de 18 anos, cerca de 64 milhões(44%) estão no sudeste, isso implica que a quantidade de diabéticos nessa região vai muito maior do que as outras regiões como vemos no gráfico abaixo. Cerca de 49.7% dos diabéticos residem no sudeste brasileiro.
+   Dos aproximadamente 146 milhões de brasileiros acima de 18 anos, cerca de 64 milhões(44%) estão no sudeste, isso implica que a quantidade de diabéticos nessa região vai muito maior do que as outras regiões como vemos no gráfico abaixo. Cerca de 49,7% dos diabéticos residem no sudeste brasileiro.
 
 
 ```{r echo=FALSE}
@@ -470,9 +470,6 @@ dens <- survey::svysmooth(~as.numeric(q031), subset(pns_design_srvyr, (q030==1) 
 lines(dens,col="blue",lwd=2)
 
 ```
-
-
-
 
 ``` {r echo=FALSE}
 
