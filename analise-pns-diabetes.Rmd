@@ -3,6 +3,7 @@ title: "Análise, PNS - DIABETES"
 author: "Diego Aguirre, Gabriel Rodrigues, Henrique Alves"
 date: '2019'
 output:
+  word_document: default
   pdf_document: default
   html_document: default
 subtitle: Data Prep
@@ -53,10 +54,6 @@ Variáveis Demográficas e Pessoais:
 * `c006` - Sexo:
     + `1` - masculino
     + `2` - feminino
-* `i001` - Tem plano de saúde
-    + `1` - sim
-    + `2` - não
-* `c008` - Idade (numérica)
 * `c009` - Cor ou Raça
    + `1` - Branca
    + `2` - Preta
@@ -64,48 +61,35 @@ Variáveis Demográficas e Pessoais:
    + `4` - Parda
    + `5` - Indígena
    + `9` - Ignorado
-* `m016` - nos últimos 12 meses, frequência de atividades esportivas
-    + `1` - mais de uma vez por semana;
-    + `2` - uma vez por semana;
-    + `3` - de 2 a 3 vezes por mês;
-    + `4` - algumas vezes no ano;
-    + `5` - uma vez no ano;
-    + `6` - nenhuma vez.
+* `d009` - curso mais avançado que cursou?
+   + `01` - Classe de alfabetização – CA 
+   + `02` - Alfabetização de jovens e adultos
+   + `03` - Antigo primário (elementar)
+   + `04` - Antigo ginásio (médio 1º ciclo)
+   + `05` - Regular do ensino fundamental ou do 1º grau 
+   + `06` - Educação de jovens e adultos (EJA) ou supletivo do ensino fundamental
+   + `07` - Antigo científico, clássico etc. (médio 2º ciclo)
+   + `08` - Regular do ensino médio ou do 2º grau
+   + `09` - Educação de jovens e adultos (EJA) ou supletivo do ensino médio
+   + `10` - Superior - graduação
+   + `11` - Mestrado
+   + `12` - Doutorado
+   + `  ` - Não aplicável
+* `w00103` - peso
+* `w00203` - altura
+
+Variáveis de Estilo de vida:
+
+* `p009` - quantos dias na semana o indivíduo come vegetais
+* `p018` - quantos dias na semana o indivíduo come frutas
+* `p020` - quantos dias na semana o indivíduo consome regrigerantes e sucos industriais
+* `p025` - quantos dias na semana o indivíduo come alimentos doces(bolos, tortas, chocolates...)
+* `p026` - quantos dias na semana o indivíduo substitui almoço ou janta por sanduiches, salgados ou pizzas.
+* `p028` - quantos dias na semana o indivíduo consome bebidas alcoolicas
 * `p035`  - quantos dias por semana costuma praticar exerc físico ou esporte
 * `w00103` - peso final (medido) (kg)
 * `w00203` - altura final (medido) (cm)
-* `w00303` - circunferência cintura final (cm)
 
-Variáveis de Utilização de Serviços de Saúde:
-
-* `j004` - Qual foi o principal motivo de saúde que impediu _____ de realizar suas atividade habituais nas duas últimas semanas? 
-   + `14` - Pressão Alta
-   + `15` - Diabetes
-
-Estilos de Vida
-
-* `p020`	- Em quantos dias da semana o(a) Sr(a) costuma tomar refrigerante (ou suco artificial)? (0 = Nunca ou menos de uma vez por semana)
-* `p021` - Que tipo de refrigerante ou suco artificial o(a) Sr(a) costuma tomar?
-   + `1` - 1 copo
-   + `2` - 2 copos
-   + `3` - 3 copos
-            Não aplicavel
-* `p022`	- Em geral, quantos copos de refrigerante ou suco artificial o(a) Sr(a) costuma tomar por dia?
-   + `1` - 1 copo
-   + `2` - 2 copos
-   + `3` - 3 copos
-            Não aplicavel
-* `p025`	- Em quantos dias da semana o(a) Sr(a) come alimentos doces, tais como pedaços de bolo ou torta, doces, chocolates, balas, biscoitos ou bolachas doces? (0 = Nunca ou menos de uma vez por semana)
-* `p027` - Com que frequência o(a) Sr(a) costuma consumir alguma bebida alcoólica?
-   + `1` - Não bebo nunca
-   + `2` - Mênos de uma vez por mês
-   + `3` - Uma vez ou mais por mês
-            Não aplicavel
-* `P028`	- Quantos dias por semana o(a) Sr(a) costuma tomar alguma bebida alcoólica? (0 = Nunca ou menos de uma vez por semana)
-
-* `P029`	- Em geral, no dia que o(a) Sr(a) bebe, quantas doses de bebida alcoólica o(a) Sr(a) consome? (1 dose de bebida alcoólica equivale a 1 lata de cerveja, 1 taça de vinho ou 1 dose de cachaça, whisky ou qualquer outra bebida alcoólica destilada)
-* `P03701`	- Em geral, no dia que o(a) Sr(a) pratica exercício ou esporte, quantas horas dura esta atividade?
-* `P03702`	- Em geral, no dia que o(a) Sr(a) pratica exercício ou esporte, quantos minutos dura esta atividade?
 
 Variáveis de Doenças Crônicas
 
@@ -122,7 +106,7 @@ Variáveis de Doenças Crônicas
    + `5` - Há 3 anos ou mais
    + `6` - Nunca fez
             Não aplicavel
-* `Q030`	- Algum médico já lhe deu o diagnóstico de diabetes?
+* `Q030`	- Algum médico já lhe deu o diagnóstico de diabetes? (CLASSE A SER PREDITA)
    + `1` - Sim
    + `2` - Apenas durante a gravidez (só para mulheres)
    + `3` - Não
@@ -139,25 +123,10 @@ Variáveis de Doenças Crônicas
    + `1` - Sim
    + `2` - Não
             Não aplicavel
-            
 * `R039`	-R39. Durante a sua vida, a sra já ficou grávida (mesmo que a gravidez não tenha chegado até o final)?
    + `1` - Sim
    + `2` - Não
             Não aplicavel
-* `S020`	- Durante o pré-natal, a Sra fez exame de sangue? 
-   + `1` - Sim
-   + `2` - Não
-            Não aplicavel
-* `S021`	- Em alguma consulta do pré-natal o médico ou enfermeiro falou que seu exame de sangue mostrou açúcar alto (presença de diabetes)?
-   + `1` - Sim
-   + `2` - Não
-            Não aplicavel
-* `W00407`	- Pressão arterial sistólica  - Final (em mmHg) 
-   + `60 a 290` - mmHg
-   + `999` - Erro
-W00408 - Pressão arterial diastólica - Final (em mmHg) 
-   + `60 a 290` - mmHg
-   + `999` - Erro
 
 Variáveis de Identificação e controle
 
@@ -266,7 +235,7 @@ Fiocruz:
 
 A Fundação Oswaldo Cruz (Fiocruz) foi uma das responsáveis em parceria com o Instituto Brasileiro de Geografia e Estatística(IBGE) pela PNS. Esse valor demonstra a consistência das nossas análises como vemos no gráfico abaixo onde a taxa de diabéticos correspondeu ao do estudos publicados pela Fiocruz.
    
-Utilizamos a variável `q030` que identifica se o partitipante já foi diagnosticado com Diabetes por algum médico. Os valores `não aplicável` demonstra as pessoas que nunca fizeram exames de sangue, definidas pela variável `q029` que pergunta quando foi a última vez que a pessoa fez exame de sangue. 
+Utilizamos a variável `q030` que identifica se o participante já foi diagnosticado com Diabetes por algum médico. Os valores `não aplicável` demonstra as pessoas que nunca fizeram exames de sangue, definidas pela variável `q029` que pergunta quando foi a última vez que a pessoa fez exame de sangue. 
 
 
 ```{r echo=FALSE}
@@ -288,7 +257,7 @@ p
 
 Realizando uma análise mais específica, obtivemos também consistência nos dados que dizem a respeita da taxa de diabéticos em relação ao sexo, como resultado obtivemos uma taxa de 5,4% para os homens e 7% para as mulheres. Para verificar a consistência dos dados utilizamos um artigo científico publicado na biblioteca virtual de saúde (SciELO).  
    
-Para o cáculo utilizamos a variável `c006` que representa o sexo do entrevistado e a variável `q030` utilizada na análise anterior.
+Para o cálculo utilizamos a variável `c006` que representa o sexo do entrevistado e a variável `q030` utilizada na análise anterior.
    
 Artigo:
    http://www.scielo.br/scielo.php?pid=s2237-96222015000200305&script=sci_abstract&tlng=pt
@@ -502,18 +471,6 @@ lines(dens,col="blue",lwd=2)
 
 ```
 
-## Gravidez
-
-Avaliando a distribuição de gravidez pela classificação de diagnóstico de diabetes observamos que as mulheres que apresentaram diabetes na gravidez(2) possuem outliers muito mais expressivos que os outros grupos, chegando até a 18 o número de partos. A mediana mantém o mesmo entre todas as classes, mas tendo uma distância interquartil menor entre as diabéticas.
-
-``` {r echo=FALSE}
-
-survey::svyboxplot(r043 ~ q030, subset(pns_design_srvyr, c006 == "feminino"), all.outliers=TRUE)
-
-```
-
-
-
 ``` {r echo=FALSE}
 
 #Separando a base de dados
@@ -711,7 +668,7 @@ df$variables[df$variables$ja_ficou_gravida_r039 == 2, c("avc_q068")] = 0
 
 # Decisão
 
-Definir como iremos tratar os valores faltantes das variáveis de Pressão Alta, Colesterol Alto e Diagnostico de Diabetes:
+Definir remover os registros que tem como NA diagnóstico de colesterol alto q060, pressão alta q002 e diabetes q030.
 
 ```{r echo=FALSE}
 
