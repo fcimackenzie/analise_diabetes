@@ -20,6 +20,9 @@ library(ggpubr)
 library(dplyr)
 library(knitr)
 library(tidyr)
+library(dummies)
+library(mlr)
+library(caret)
 ```
 
 # Introdução
@@ -471,6 +474,33 @@ lines(dens,col="blue",lwd=2)
 
 ```
 
+## Distribuição da escolaridade no diagnóstico de Diabetes
+
+```{r echo=FALSE}
+
+diab_esc <- survey::svytable(~ q030 + d009, pns_design_srvyr)
+diab_esc <- as.data.frame(diab_esc)
+diab_esc$porc = 0
+
+pop_esc = group_by(diab_esc, d009) %>% summarise(freq = sum(Freq))
+
+diab_esc = diab_esc[diab_esc$q030 == "1", ]
+
+for (i in pop_esc$d009){
+   print(paste(c(diab_esc[diab_esc$q030 == "1" & diab_esc$d009 == i, ]$Freq  ,  pop_esc[pop_esc$d009 == i,]$freq)))
+   diab_esc[diab_esc$q030 == "1" & diab_esc$d009 == i, c("porc")] = diab_esc[diab_esc$q030 == "1" & diab_esc$d009 == i, ]$Freq / pop_esc[pop_esc$d009 == i,]$freq 
+}
+
+print(sum(diab_esc$Freq))
+print(sum(pop_esc$freq))
+
+p <-ggplot(data=diab_esc, aes(x=d009, y=porc * 100)) +
+  geom_bar(stat="identity") +
+  geom_text(aes(label=round(porc*100, digits = 1)), vjust=-0.5, color="black", size=3.5)+ 
+  labs_pubr() + theme_pubr()
+p
+
+```
 
 
 
@@ -572,6 +602,17 @@ df$variables[df$variables$fxetaria == 32 & df$variables$sexo_c006 == "feminino" 
 df$variables[df$variables$fxetaria == 50 & df$variables$sexo_c006 == "feminino" & is.na(df$variables$altura_w00203), c("altura_w00203")] = round(femi_50, digits = 1)
 df$variables[df$variables$fxetaria == 60 & df$variables$sexo_c006 == "feminino" & is.na(df$variables$altura_w00203), c("altura_w00203")] = round(femi_60, digits = 1)
 
+df <- df %>% mutate(imc = peso_w00103/(altura_w00203/100* altura_w00203/100)) 
+df$variables <- df$variables %>% mutate(imcclass = case_when(imc < 17.0 ~ "1",
+                                 imc >= 17.0 & imc < 18.5 ~ "2",
+                                 imc >= 18.5 & imc < 25.0 ~ "3",
+                                 imc >= 25.0 & imc < 30.0 ~ "4",
+                                 imc >= 30.0 & imc < 35.0 ~ "5",
+                                 imc >= 35.0 & imc < 40.0 ~ "6",
+                                 imc >= 40.0 ~ "7"
+                                 ))
+
+df$variables <- df$variables[,c(1:23, 25, 24)]
 ```
 
 ### Inversão de valores de variáveis
@@ -688,3 +729,63 @@ print(paste0("perda total: ", sum(perda_t[ (perda_t$pressao_alta_q002 == " " | p
 print(paste0("porcentagem de perda total: ", sum(perda_t[(perda_t$pressao_alta_q002 == " " | perda_t$colesterol_alto_q060 == " " | perda_t$diagnostico_diabetes_q030 == " "), c("Freq")]) / sum(perda_t$Freq)))
 
 ```
+
+Limpando pessoas que nunca fizeram exame de pressão alta, colesterol alto e diabetes:
+
+```{r echo=FALSE}
+
+df <- subset(df, diagnostico_diabetes_q030 != " " & diagnostico_diabetes_q030 != 2 & pressao_alta_q002 != " " & colesterol_alto_q060 != " ")
+
+```
+
+
+# Criando as variáveis dummies
+
+```{r echo=FALSE}
+
+df$variables$exames_glicemia_q029 = NULL
+
+df_dummies = df[ ,c("escolaridade_d009")]
+
+# esc_dummies <- dummies::dummy(df$variables$escolaridade_d009, sep = "_",)
+# df_dummies$variables <- cbind(df_dummies$variables, esc_dummies)
+# df_dummies$variables <- df_dummies$variables[, -1]
+
+df_factor = df$variables %>% mutate_if(is.numeric, as.character)
+
+df_factor$peso_w00103 <- as.numeric(df_factor$peso_w00103)
+df_factor$altura_w00203 <- NULL
+df_factor$idade <- NULL
+df_factor$imc <- NULL
+df_factor$peso_w00103 <- NULL
+
+df_factor = df_factor %>% mutate_if(is.character, as.factor)
+
+dummies_df <- mlr::createDummyFeatures(df_factor)
+
+
+```
+
+# Removendo dummies desnecessários
+
+```{r echo=FALSE}
+
+#pressao_alta_q002..
+#colesterol_alto_q060..
+#diagnostico_diabetes_q030..
+#diagnostico_diabetes_q030.2
+#diagnostico_diabetes_q030.3
+
+```
+
+# Modelagem
+
+```{r echo=FALSE}
+
+gl1 <- survey::svyglm(diagnostico_diabetes ~ escolaridade_d009_0 + escolaridade_d009_1 + escolaridade_d009_2 +   escolaridade_d009_3 + escolaridade_d009_4 + escolaridade_d009_5 + escolaridade_d009_6 + escolaridade_d009_7 + escolaridade_d009_8 + escolaridade_d009_9 + escolaridade_d009_10 + escolaridade_d009_11 + escolaridade_d009_12, design=a)
+
+
+```
+
+
+
