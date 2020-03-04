@@ -5,4 +5,4 @@ Diego Barros Aguirre
 Gabriel Rodrigues de Souza  
 Henrique da Silva Alves
 
-Orientador: Dr Mario Menezes
+Orientador: Prof. Dr. Mario Menezes
