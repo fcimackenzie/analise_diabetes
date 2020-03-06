@@ -470,32 +470,42 @@ Temos o gráfico que demonstra a idade que as pessoas foram diagnosticadas com a
 
 survey::svyhist(~as.numeric(q031), subset(pns_design_srvyr, q030==1))
 dens <- survey::svysmooth(~as.numeric(q031), subset(pns_design_srvyr, (q030==1) & (q030!=" ")))
-lines(dens,col="blue",lwd=2)
 
 ```
 
-<<<<<<< HEAD
+
 ## Distribuição da escolaridade no diagnóstico de Diabetes
 
 ```{r echo=FALSE}
 
-diab_esc <- survey::svytable(~ q030 + d009, pns_design_srvyr)
+pns_design_srvyr <- pns_design_srvyr %>% 
+     mutate(fx_esc = case_when(d009 == "  " ~ "0",
+                               d009 == "01" | d009 == "02" | d009 == "03" | d009 == "05" |  d009 == "06"  ~ "1",
+                               d009 == "04" | d009 == "07" | d009 == "08" | d009 == "09" ~ "2",
+                               d009 == "10" ~ "3",
+                               d009 == "11" ~ "4",
+                               d009 == "12" ~ "5"
+                                 ))
+
+
+```
+
+```{r echo=FALSE}
+
+diab_esc <- survey::svytable(~ q030 + fx_esc, pns_design_srvyr)
 diab_esc <- as.data.frame(diab_esc)
 diab_esc$porc = 0
 
-pop_esc = group_by(diab_esc, d009) %>% summarise(freq = sum(Freq))
+pop_esc = group_by(diab_esc, fx_esc) %>% summarise(freq = sum(Freq))
 
 diab_esc = diab_esc[diab_esc$q030 == "1", ]
 
-for (i in pop_esc$d009){
-   print(paste(c(diab_esc[diab_esc$q030 == "1" & diab_esc$d009 == i, ]$Freq  ,  pop_esc[pop_esc$d009 == i,]$freq)))
-   diab_esc[diab_esc$q030 == "1" & diab_esc$d009 == i, c("porc")] = diab_esc[diab_esc$q030 == "1" & diab_esc$d009 == i, ]$Freq / pop_esc[pop_esc$d009 == i,]$freq 
+for (i in pop_esc$fx_esc){
+   diab_esc[diab_esc$q030 == "1" & diab_esc$fx_esc == i, c("porc")] = diab_esc[diab_esc$q030 == "1" & diab_esc$fx_esc == i, ]$Freq / pop_esc[pop_esc$fx_esc == i,]$freq 
 }
 
-print(sum(diab_esc$Freq))
-print(sum(pop_esc$freq))
 
-p <-ggplot(data=diab_esc, aes(x=d009, y=porc * 100)) +
+p <-ggplot(data=diab_esc, aes(x=fx_esc, y=porc )) +
   geom_bar(stat="identity") +
   geom_text(aes(label=round(porc*100, digits = 1)), vjust=-0.5, color="black", size=3.5)+ 
   labs_pubr() + theme_pubr()
@@ -505,17 +515,15 @@ p
 
 
 
-=======
->>>>>>> 97ee00cdaf07d8e0c1ed04d7b47c8ade3dcc5231
 ``` {r echo=FALSE}
 
 #Separando a base de dados
 
-df = pns_design_srvyr[ ,c("c006", "c009", "d009", "w00103", "w00203", "p009", "p018", "p020", "p025", "p026", "p028", "p035", "p050", "q002", "q029", "q060", "q068", "q124","r039", "freqativ", "fxetaria", "idade", "imc", "q030")]
+df = pns_design_srvyr[ ,c("c006", "c009", "fx_esc", "w00103", "w00203", "p009", "p018", "p020", "p025", "p026", "p028", "p035", "p050", "q002", "q029", "q060", "q068", "q124","r039", "freqativ", "fxetaria", "idade", "imc", "q030")]
 
 
 
-names(df$variables) = c("sexo_c006","cor_raca_c009", "escolaridade_d009", "peso_w00103", "altura_w00203", "come_verduras_p009", "come_frutas_p018", "refrigerante_suco_p020", "alimentos_doces_p025", "substitui_refeicoes_p026", "bebida_alcoolica_p028", "dias_semana_ativ_fisica_p035", "fumante_p050", "pressao_alta_q002", "exames_glicemia_q029", "colesterol_alto_q060", "avc_q068", "insuficiencia_renal_q124", "ja_ficou_gravida_r039", "freqativ", "fxetaria", "idade", "imc", "diagnostico_diabetes_q030")
+names(df$variables) = c("sexo_c006","cor_raca_c009", "faixa_escolaridade", "peso_w00103", "altura_w00203", "come_verduras_p009", "come_frutas_p018", "refrigerante_suco_p020", "alimentos_doces_p025", "substitui_refeicoes_p026", "bebida_alcoolica_p028", "dias_semana_ativ_fisica_p035", "fumante_p050", "pressao_alta_q002", "exames_glicemia_q029", "colesterol_alto_q060", "avc_q068", "insuficiencia_renal_q124", "ja_ficou_gravida_r039", "freqativ", "fxetaria", "idade", "imc", "diagnostico_diabetes_q030")
 
 ```
 
@@ -528,8 +536,8 @@ names(df$variables) = c("sexo_c006","cor_raca_c009", "escolaridade_d009", "peso_
 
 # pressao alta = q002
 
-df$variables$escolaridade_d009 = as.numeric(df$variables$escolaridade_d009)
-df$variables[is.na(df$variables$escolaridade_d009), c("escolaridade_d009")] = 0
+df$variables$faixa_escolaridade = as.numeric(df$variables$faixa_escolaridade)
+df$variables[is.na(df$variables$faixa_escolaridade), c("faixa_escolaridade")] = 0
 df$variables[is.na(df$variables$bebida_alcoolica_p028), c("bebida_alcoolica_p028")] = 0
 df$variables[is.na(df$variables$dias_semana_ativ_fisica_p035), c("dias_semana_ativ_fisica_p035")] = 0
 df$variables[df$variables$ja_ficou_gravida_r039 == " ", c("ja_ficou_gravida_r039")] = 0
@@ -748,7 +756,7 @@ df <- subset(df, diagnostico_diabetes_q030 != " " & diagnostico_diabetes_q030 !=
 
 df$variables$exames_glicemia_q029 = NULL
 
-df_dummies = df[ ,c("escolaridade_d009")]
+df_dummies = df[ ,c("faixa_escolaridade")]
 
 # esc_dummies <- dummies::dummy(df$variables$escolaridade_d009, sep = "_",)
 # df_dummies$variables <- cbind(df_dummies$variables, esc_dummies)
@@ -766,6 +774,7 @@ df_factor = df_factor %>% mutate_if(is.character, as.factor)
 
 dummies_df <- mlr::createDummyFeatures(df_factor)
 
+df$variables = dummies_df
 
 ```
 
@@ -773,20 +782,23 @@ dummies_df <- mlr::createDummyFeatures(df_factor)
 
 ```{r echo=FALSE}
 
-#pressao_alta_q002..
-#colesterol_alto_q060..
-#diagnostico_diabetes_q030..
-#diagnostico_diabetes_q030.2
-#diagnostico_diabetes_q030.3
-
+df$variables$pressao_alta_q002.. = NULL
+df$variables$colesterol_alto_q060.. = NULL
+df$variables$diagnostico_diabetes_q030.. = NULL
+df$variables$diagnostico_diabetes_q030.2 = NULL
+df$variables$diagnostico_diabetes_q030.3 = NULL
 ```
 
 # Modelagem
 
+
+
+
 ```{r echo=FALSE}
 
-gl1 <- survey::svyglm(diagnostico_diabetes ~ escolaridade_d009_0 + escolaridade_d009_1 + escolaridade_d009_2 +   escolaridade_d009_3 + escolaridade_d009_4 + escolaridade_d009_5 + escolaridade_d009_6 + escolaridade_d009_7 + escolaridade_d009_8 + escolaridade_d009_9 + escolaridade_d009_10 + escolaridade_d009_11 + escolaridade_d009_12, design=a)
+fla <- paste("diagnostico_diabetes_q030.1 ~", paste(names(df$variables[1:101]), collapse="+"))
 
+gl1 <- survey::svyglm(as.formula(fla) , family = binomial, design=df)
 
 ```
 
