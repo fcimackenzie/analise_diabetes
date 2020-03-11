@@ -525,9 +525,25 @@ df = pns_design_srvyr[ ,c("c006", "c009", "fx_esc", "w00103", "w00203", "p009", 
 
 names(df$variables) = c("sexo_c006","cor_raca_c009", "faixa_escolaridade", "peso_w00103", "altura_w00203", "come_verduras_p009", "come_frutas_p018", "refrigerante_suco_p020", "alimentos_doces_p025", "substitui_refeicoes_p026", "bebida_alcoolica_p028", "dias_semana_ativ_fisica_p035", "fumante_p050", "pressao_alta_q002", "exames_glicemia_q029", "colesterol_alto_q060", "avc_q068", "insuficiencia_renal_q124", "ja_ficou_gravida_r039", "freqativ", "fxetaria", "idade", "imc", "diagnostico_diabetes_q030")
 
+#sexo_c006
+#fumante_p050
+#pressao_alta_q002
+#colesterol_alto_q060
+#avc_q068
+#insuficiencia_renal_q124
+
+
 ```
 
 ## Data Prep
+
+Limpando pessoas que nunca fizeram exame de pressão alta, colesterol alto e diabetes:
+
+```{r echo=FALSE}
+
+df <- subset(df, diagnostico_diabetes_q030 != " " & diagnostico_diabetes_q030 != 2 & pressao_alta_q002 != " " & colesterol_alto_q060 != " ")
+
+```
 
 ### Preenchendo NAs
 
@@ -541,6 +557,12 @@ df$variables[is.na(df$variables$faixa_escolaridade), c("faixa_escolaridade")] = 
 df$variables[is.na(df$variables$bebida_alcoolica_p028), c("bebida_alcoolica_p028")] = 0
 df$variables[is.na(df$variables$dias_semana_ativ_fisica_p035), c("dias_semana_ativ_fisica_p035")] = 0
 df$variables[df$variables$ja_ficou_gravida_r039 == " ", c("ja_ficou_gravida_r039")] = 0
+df$variables[df$variables$pressao_alta_q002 == " ", c("pressao_alta_q002")] = 0
+df$variables[df$variables$colesterol_alto_q060 == " ", c("colesterol_alto_q060")] = 0
+df$variables[df$variables$diagnostico_diabetes_q030 == " ", c("diagnostico_diabetes_q030")] = 0
+df$variables[df$variables$diagnostico_diabetes_q030 == "2", c("diagnostico_diabetes_q030")] = 0
+df$variables[df$variables$diagnostico_diabetes_q030 == "3", c("diagnostico_diabetes_q030")] = 0
+
 
 ```
 
@@ -630,6 +652,22 @@ df$variables <- df$variables[,c(1:23, 25, 24)]
 
 Para permitir e simplificar a análise a partir de um modelo alteraremos os valor de variáveis.
 
+`c006`, sexo:
+
+
+Valor Original    |      Codificação Original         | Novo Valor    | Codificação Variável `pressao_alta_q002`
+------------------|-----------------------------------|---------------|----------------------------------------
+ masculino        |  1                                |     0         |  masculino
+ femnino          |  2                                |     1         |  feminino
+ 
+
+```{r echo=FALSE}
+
+df$variables[df$variables$sexo_c006 == "masculino", c("sexo_c006")] = 0
+df$variables[df$variables$sexo_c006 == "feminino", c("sexo_c006")] = 1
+
+```
+
 `q002`, pressão alta:
 
 
@@ -717,7 +755,8 @@ Valor Original    |      Codificação Original    | Novo Valor    | Codificaç�
 
 ```{r echo=FALSE}
 
-df$variables[df$variables$ja_ficou_gravida_r039 == 2, c("avc_q068")] = 0
+
+df$variables[df$variables$ja_ficou_gravida_r039 == 2, c("ja_ficou_gravida_r039")] = 0
 
 ```
 
@@ -741,13 +780,7 @@ print(paste0("porcentagem de perda total: ", sum(perda_t[(perda_t$pressao_alta_q
 
 ```
 
-Limpando pessoas que nunca fizeram exame de pressão alta, colesterol alto e diabetes:
 
-```{r echo=FALSE}
-
-df <- subset(df, diagnostico_diabetes_q030 != " " & diagnostico_diabetes_q030 != 2 & pressao_alta_q002 != " " & colesterol_alto_q060 != " ")
-
-```
 
 
 # Criando as variáveis dummies
@@ -763,6 +796,16 @@ df_dummies = df[ ,c("faixa_escolaridade")]
 # df_dummies$variables <- df_dummies$variables[, -1]
 
 df_factor = df$variables %>% mutate_if(is.numeric, as.character)
+
+df_factor$sexo_c006 = as.numeric(df_factor$sexo_c006)
+df_factor$fumante_p050 = as.numeric(df_factor$fumante_p050)
+df_factor$pressao_alta_q002 = as.numeric(df_factor$pressao_alta_q002)
+df_factor$colesterol_alto_q060 = as.numeric(df_factor$colesterol_alto_q060)
+df_factor$avc_q068 = as.numeric(df_factor$avc_q068)
+df_factor$insuficiencia_renal_q124 = as.numeric(df_factor$insuficiencia_renal_q124)
+df_factor$ja_ficou_gravida_r039 = as.numeric(df_factor$ja_ficou_gravida_r039)
+
+
 
 df_factor$peso_w00103 <- as.numeric(df_factor$peso_w00103)
 df_factor$altura_w00203 <- NULL
@@ -782,11 +825,20 @@ df$variables = dummies_df
 
 ```{r echo=FALSE}
 
-df$variables$pressao_alta_q002.. = NULL
-df$variables$colesterol_alto_q060.. = NULL
-df$variables$diagnostico_diabetes_q030.. = NULL
-df$variables$diagnostico_diabetes_q030.2 = NULL
-df$variables$diagnostico_diabetes_q030.3 = NULL
+df$variables$diagnostico_diabetes_q030.0 = NULL
+df$variables$cor_raca_c009.9 = NULL
+df$variables$faixa_escolaridade.5 = NULL
+df$variables$come_verduras_p009.7 = NULL
+df$variables$come_frutas_p018.7 = NULL
+df$variables$refrigerante_suco_p020.7 = NULL
+df$variables$alimentos_doces_p025.7 = NULL
+df$variables$substitui_refeicoes_p026.7 = NULL
+df$variables$bebida_alcoolica_p028.7 = NULL
+df$variables$dias_semana_ativ_fisica_p035.7 = NULL
+df$variables$freqativ.5 = NULL
+df$variables$fxetaria.60 = NULL
+df$variables$imcclass.7 = NULL
+
 ```
 
 # Modelagem
@@ -796,9 +848,16 @@ df$variables$diagnostico_diabetes_q030.3 = NULL
 
 ```{r echo=FALSE}
 
-fla <- paste("diagnostico_diabetes_q030.1 ~", paste(names(df$variables[1:101]), collapse="+"))
+fla <- paste("diagnostico_diabetes_q030.1 ~", paste(names(df$variables[1:81]), collapse="+"))
 
-gl1 <- survey::svyglm(as.formula(fla) , family = binomial, design=df)
+gl1 <- survey::svyglm(as.formula(fla) , family = "quasipoisson", design=df)
+
+```
+
+
+```{r echo=FALSE}
+
+summary(gl1)
 
 ```
 
