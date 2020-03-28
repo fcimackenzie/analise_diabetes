@@ -848,18 +848,58 @@ df$variables$imcclass.7 = NULL
 
 ```{r echo=FALSE}
 
-fla <- paste("diagnostico_diabetes_q030.1 ~", paste(names(df$variables[1:81]), collapse="+"))
+construir_modelo <- function(df){
 
-gl1 <- survey::svyglm(as.formula(fla) , family = "quasipoisson", design=df)
+   nomes = names(df$variables[1:(length(df$variables) - 1)])
+   fla <- paste("diagnostico_diabetes_q030.1 ~", paste(nomes, collapse="+"))
+   
+   gl <- survey::svyglm(as.formula(fla) , family = "quasipoisson", design=df)
+   
+   return(gl)
+}
+   
+ordenar_pvalue <- function(model){
+   
+   df_model = data.frame(keyName=names(model$coefficients), value=model$coefficients, row.names=NULL)
+   df_model$COEFF_ABS = abs(df_model$value)
+   df_model$COEFF_ABS = abs(df_model$value)
+   
+   p <- coef(summary(model))[,4]
+   df_p = data.frame(keyName=names(p), value=p, row.names=NULL)
+   
+   df_model$p_value <- p
+   
+   df_model <- df_model[order(df_model$p_value),]
+   
+   return(df_model)
+   
+}
 
 ```
 
 
+### Primeiro modelo:
+
+``` {r echo=FALSE}
+
+model1 <- construir_modelo(df)
+
+print(summary(model1))
+
+df_model1 = ordenar_pvalue(model1)
+
+```
 ```{r echo=FALSE}
 
-summary(gl1)
+print(df_model1[df_model1$p_value >= 0.5, ])
 
 ```
 
+``` {r echo=FALSE}
 
+droplist1 <- df_model1[df_model1$p_value >= 0.5, 1] 
 
+df2 = df
+df2$variables <- df2$variables[, !colnames(df2$variables) %in% droplist1]
+
+```
